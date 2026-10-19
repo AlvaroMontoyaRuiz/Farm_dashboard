@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../lib/api.js';
 import { Panel, Skeleton } from '../components/ui.jsx';
 import ConfirmDelete from '../components/ConfirmDelete.jsx';
@@ -17,6 +17,12 @@ export default function Animales() {
   const [saved, setSaved] = useState('');
   const [result, setResult] = useState(null); // feed conversion of the exit just saved
   const [busy, setBusy] = useState(false);
+  const resultRef = useRef(null);
+
+  // Bring the metrics into view when an exit is saved or a past exit is opened
+  useEffect(() => {
+    if (result) resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, [result]);
 
   const reload = useCallback(async () => {
     const [m, s] = await Promise.all([api.get('/api/animals'), api.get('/api/stock')]);
@@ -131,7 +137,7 @@ export default function Animales() {
               </label>
 
               <label className="block text-sm">
-                <span className="label">Peso total del grupo que {isOut ? 'sale' : 'entra'} (kg)</span>
+                <span className="label">Peso a registrar: total del grupo que {isOut ? 'sale' : 'entra'} (kg)</span>
                 <input
                   className={field}
                   type="number"
@@ -162,10 +168,14 @@ export default function Animales() {
             </form>
           </Panel>
 
-          {result && <ConversionResult c={result.c} corralName={result.corralName} onClose={() => setResult(null)} />}
+          {result && (
+            <div ref={resultRef}>
+              <ConversionResult c={result.c} corralName={result.corralName} onClose={() => setResult(null)} />
+            </div>
+          )}
         </div>
 
-        <Panel className="lg:col-span-2" title="Movimientos recientes" subtitle="En las salidas se muestra la conversión alimenticia">
+        <Panel className="lg:col-span-2" title="Movimientos recientes" subtitle="Toca la conversión de una salida para ver su detalle">
           {!rows ? (
             <Skeleton className="h-48" />
           ) : rows.length === 0 ? (
@@ -179,27 +189,28 @@ export default function Animales() {
                     <th className="px-3 py-2 font-medium">Corral</th>
                     <th className="px-3 py-2 font-medium">Movimiento</th>
                     <th className="px-3 py-2 font-medium text-right">Animales</th>
-                    <th className="px-3 py-2 font-medium text-right">Peso total</th>
+                    <th className="px-3 py-2 font-medium text-right whitespace-nowrap">Peso</th>
                     <th className="px-3 py-2 font-medium">Conversión</th>
-                    <th className="px-3 py-2 font-medium">Registró</th>
                     <th />
                   </tr>
                 </thead>
                 <tbody>
                   {rows.map((r) => (
                     <tr key={r.id} className="border-t border-line">
-                      <td data-label="Fecha" className="px-3 py-2 whitespace-nowrap">{shortDay(r.movementAt)}</td>
+                      <td data-label="Fecha" className="px-3 py-2 whitespace-nowrap">
+                        {shortDay(r.movementAt)}
+                        <div className="text-xs text-ink-faint">{r.createdBy || '—'}</div>
+                      </td>
                       <td data-label="Corral" className="px-3 py-2 whitespace-nowrap">{r.corralName}</td>
                       <td data-label="Movimiento" className="px-3 py-2">
                         {r.movement === 'ingreso' ? 'Ingreso' : 'Salida'}
                         {r.note && <div className="text-xs text-ink-faint">{r.note}</div>}
                       </td>
                       <td data-label="Animales" className="px-3 py-2 text-right font-semibold">{r.movement === 'ingreso' ? '+' : '−'}{r.quantity}</td>
-                      <td data-label="Peso total" className="px-3 py-2 text-right whitespace-nowrap">{r.weightKg != null ? `${num2(r.weightKg)} kg` : '—'}</td>
+                      <td data-label="Peso" className="px-3 py-2 text-right whitespace-nowrap">{r.weightKg != null ? `${num2(r.weightKg)} kg` : '—'}</td>
                       <td data-label="Conversión" className="px-3 py-2">
-                        {r.movement === 'salida' ? <ConversionBadge c={r.conversion} /> : <span className="text-ink-faint">—</span>}
+                        {r.movement === 'salida' ? <ConversionBadge c={r.conversion} onClick={r.conversion ? () => setResult({ c: r.conversion, corralName: r.corralName }) : undefined} /> : <span className="text-ink-faint">—</span>}
                       </td>
-                      <td data-label="Registró" className="px-3 py-2 text-ink-soft">{r.createdBy || '—'}</td>
                       <td data-label="" className="px-3 py-1 text-right">
                         <ConfirmDelete table="animal_movements" id={r.id} onDeleted={reload} />
                       </td>

@@ -51,6 +51,10 @@ export function whenLabel(ts) {
 }
 
 // Weights
+// Always two decimals (2,00) — used for the feed-conversion number
+const nfFix = new Intl.NumberFormat('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+export const fix2 = (n) => nfFix.format(Number(n || 0));
+
 export const kgLabel = (n) => `${num2(n)} kg`;
 
 // Feed-conversion scale (conversión alimenticia): up to 2.5 good, 2.6–3.0 regular, above 3.0 bad.
