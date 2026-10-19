@@ -77,3 +77,7 @@ body { -webkit-text-size-adjust: 100%; padding-bottom: env(safe-area-inset-botto
   .rtable td[data-label=""]::before { display: none; }
   .rtable td[data-label=""] { justify-content: flex-end; }
 }
+
+/* Grid cells may shrink below their content, so a wide table scrolls inside its card
+   instead of stretching the whole page. */
+.grid > * { min-width: 0; }

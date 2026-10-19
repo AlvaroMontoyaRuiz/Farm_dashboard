@@ -11,6 +11,7 @@ const TABS = [
   { id: 'resumen', label: 'Resumen' },
   { id: 'movimientos', label: 'Movimientos' },
   { id: 'ingresos', label: 'Ingresos' },
+  { id: 'tipos', label: 'Tipos de bulto' },
 ];
 
 const field = 'field';
@@ -109,6 +110,8 @@ export default function Inventario({ user }) {
       {tab === 'movimientos' && <Movimientos inv={inv} filters={filters} setFilters={setFilters} />}
 
       {tab === 'ingresos' && <Ingresos isAdmin={isAdmin} onChanged={load} />}
+
+      {tab === 'tipos' && <TiposBulto />}
     </div>
   );
 }
@@ -225,6 +228,94 @@ function Movimientos({ inv, filters, setFilters }) {
 }
 
 /* ---------------- Ingresos (register + list) ---------------- */
+
+// Specs of each type of bulto. kg per bulto turns bultos into kilos for the feed conversion.
+function TiposBulto() {
+  const [types, setTypes] = useState(null);
+  const [err, setErr] = useState('');
+  const load = useCallback(async () => {
+    try {
+      setTypes((await api.get('/api/food-types')).types);
+    } catch (e) {
+      setErr(e.message);
+    }
+  }, []);
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  return (
+    <div className="space-y-5">
+      <p className="text-ink-soft max-w-2xl">
+        Los kilos de cada bulto se usan para calcular la conversión alimenticia al sacar animales de un corral.
+        Si cambias el peso, solo afecta el consumo que se registre desde ahora: lo anterior conserva el peso que tenía.
+      </p>
+      {err && <p className="text-alert text-sm">{err}</p>}
+      {!types ? (
+        <Skeleton className="h-48" />
+      ) : (
+        <div className="grid md:grid-cols-2 gap-5">
+          {types.map((t) => (
+            <TipoCard key={t.type} t={t} onSaved={load} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TipoCard({ t, onSaved }) {
+  const [kg, setKg] = useState(String(t.kgPerBulto));
+  const [desc, setDesc] = useState(t.description || '');
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [err, setErr] = useState('');
+  const changed = Number(kg) !== Number(t.kgPerBulto) || desc.trim() !== (t.description || '');
+
+  async function save(e) {
+    e.preventDefault();
+    setBusy(true);
+    setErr('');
+    setMsg('');
+    try {
+      await api.post('/api/food-types', { type: t.type, kgPerBulto: Number(kg), description: desc });
+      setMsg('Guardado.');
+      await onSaved();
+    } catch (e2) {
+      setErr(e2.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Panel
+      title={
+        <span className="inline-flex items-center gap-2">
+          <span className="inline-block w-3 h-3 rounded-full" style={{ background: TYPE_COLOR[t.type] }} aria-hidden />
+          {TYPE_LABEL[t.type]}
+        </span>
+      }
+      subtitle="Especificaciones del bulto"
+    >
+      <form onSubmit={save} className="space-y-3">
+        <label className="block text-sm">
+          <span className="label">Kilos por bulto</span>
+          <input className={field} type="number" min="0.5" step="0.5" inputMode="decimal" value={kg} onChange={(e) => setKg(e.target.value)} required />
+        </label>
+        <label className="block text-sm">
+          <span className="label">Descripción (opcional)</span>
+          <input className={field} placeholder="Marca, proteína, etapa…" maxLength={200} value={desc} onChange={(e) => setDesc(e.target.value)} />
+        </label>
+        {err && <p className="text-sm text-alert" role="alert">{err}</p>}
+        {msg && !changed && <p className="text-sm text-farm-green font-medium" role="status">{msg}</p>}
+        <button className="btn btn-primary w-full" disabled={busy || !changed || !(Number(kg) > 0)}>
+          {busy ? 'Guardando…' : 'Guardar'}
+        </button>
+      </form>
+    </Panel>
+  );
+}
 
 function Ingresos({ isAdmin, onChanged }) {
   const [rows, setRows] = useState(null);

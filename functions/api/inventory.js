@@ -12,7 +12,7 @@
 // Stock is never stored: it is always received − consumed, so deleting or
 // correcting a record fixes every balance automatically.
 
-import { requireUser, json } from '../_lib/auth.js';
+import { requireUser, requireAdmin, json } from '../_lib/auth.js';
 import { todayStr, lastDays, avgWindow } from '../_lib/time.js';
 import { compareEvents } from '../_lib/stock.js';
 
@@ -21,7 +21,7 @@ const r2 = (n) => Math.round(Number(n || 0) * 100) / 100;
 
 export const onRequestGet = async ({ request, env }) => {
   try {
-    await requireUser(request, env);
+    requireAdmin(await requireUser(request, env));
   } catch (resp) {
     return resp;
   }

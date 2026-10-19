@@ -1,9 +1,9 @@
 // GET /api/deletion-log?from=&to=&table=
-import { requireUser, json } from '../_lib/auth.js';
+import { requireUser, requireAdmin, json } from '../_lib/auth.js';
 
 export const onRequestGet = async ({ request, env }) => {
   try {
-    await requireUser(request, env);
+    requireAdmin(await requireUser(request, env));
   } catch (r) {
     return r;
   }

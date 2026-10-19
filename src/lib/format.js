@@ -49,3 +49,14 @@ export function whenLabel(ts) {
   if (sameDay(d, yesterday)) return 'Ayer ' + timeLabel(d);
   return shortDay(d.toISOString().slice(0, 10));
 }
+
+// Weights
+export const kgLabel = (n) => `${num2(n)} kg`;
+
+// Feed-conversion scale (conversión alimenticia): up to 2.5 good, 2.6–3.0 regular, above 3.0 bad.
+export const RATING = {
+  buena: { label: 'Buena', icon: '✓', cls: 'bg-[#E3EFE8] text-farm-green' },
+  regular: { label: 'Regular', icon: '!', cls: 'bg-[#FFF1D6] text-[#8A5A00]' },
+  mala: { label: 'Mala', icon: '✕', cls: 'bg-alert-bg text-alert' },
+};
+export const RATING_SCALE = 'Buena: hasta 2,5 · Regular: 2,6 a 3,0 · Mala: más de 3,0';

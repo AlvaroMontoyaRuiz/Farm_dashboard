@@ -2,12 +2,12 @@
 // Returns everything that happened that day: consumption per corral,
 // animal movements, food lots received. For the admin's daily tracker.
 
-import { requireUser, json } from '../_lib/auth.js';
+import { requireUser, requireAdmin, json } from '../_lib/auth.js';
 import { todayStr } from '../_lib/time.js';
 
 export const onRequestGet = async ({ request, env }) => {
   try {
-    await requireUser(request, env);
+    requireAdmin(await requireUser(request, env));
   } catch (r) {
     return r;
   }

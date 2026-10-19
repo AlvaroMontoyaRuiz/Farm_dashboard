@@ -12,6 +12,7 @@ export default function Consumo() {
   const [params] = useSearchParams();
   const [corrales, setCorrales] = useState([]);
   const [rows, setRows] = useState(null);
+  const [kgBy, setKgBy] = useState({}); // kg per bulto of each feed type
   const [avail, setAvail] = useState(null); // { stock: {levante, finalizador}, animals: {id: n} }
   const [form, setForm] = useState({ corralId: params.get('corral') || '', foodType: 'levante', bultos: '', note: '' });
   const [err, setErr] = useState('');
@@ -26,6 +27,7 @@ export default function Consumo() {
 
   useEffect(() => {
     api.get('/api/corrales').then((r) => setCorrales(r.corrales));
+    api.get('/api/food-types').then((r) => setKgBy(Object.fromEntries(r.types.map((t) => [t.type, t.kgPerBulto])))).catch(() => {});
     reload();
   }, [reload]);
 
@@ -115,6 +117,7 @@ export default function Consumo() {
                   <span className="inline-block w-2.5 h-2.5 rounded-full mr-1.5" style={{ background: TYPE_COLOR[type] }} aria-hidden />
                   En bodega: <b className="text-ink">{num(available)} {bultosWord(available)}</b>
                   {amount > 0 && <span> · quedarían {num(available - amount)}</span>}
+                  {kgBy[type] && <span className="block text-xs text-ink-faint mt-0.5">Cada bulto pesa {num(kgBy[type])} kg{amount > 0 ? ` · ${num(amount)} ${bultosWord(amount)} = ${num(amount * kgBy[type])} kg` : ''}</span>}
                 </>
               )}
             </div>

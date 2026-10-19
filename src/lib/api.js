@@ -50,6 +50,12 @@ const ERRORS_ES = {
     'La base de datos no está conectada al proyecto (falta el binding "DB" en Cloudflare).',
   db_not_initialized:
     'La base de datos está vacía: faltan las tablas. Hay que ejecutar las migraciones.',
+  db_needs_update:
+    'La base de datos necesita una actualización. Ejecuta: npm run db:remote:update',
+  bad_weight: 'Escribe el peso total del grupo en kg.',
+  weight_implausible: (d) =>
+    `Ese peso parece incorrecto: serían ${num(d.perAnimal)} kg por animal. Escribe el peso TOTAL del grupo, no el de un animal.`,
+  bad_kg_per_bulto: 'Los kg por bulto deben ser un número mayor que 0.',
   server_error: 'Error interno del servidor. Intenta de nuevo.',
 };
 

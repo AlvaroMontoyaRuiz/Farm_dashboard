@@ -35,7 +35,7 @@ export const onRequestGet = async ({ request, env }) => {
   }
   const sql = `
     SELECT fc.id, fc.corral_id AS corralId, c.name AS corralName, fc.food_type AS foodType,
-           fc.bultos, fc.consumed_at AS consumedAt, fc.note,
+           fc.bultos, fc.kg_per_bulto AS kgPerBulto, fc.consumed_at AS consumedAt, fc.note,
            u.display_name AS createdBy, fc.created_at AS createdAt
       FROM feed_consumption fc
       JOIN corrales c ON c.id = fc.corral_id
@@ -84,8 +84,8 @@ export const onRequestPost = async ({ request, env }) => {
   // The insert itself re-checks the stock inside one SQL statement, so two
   // workers saving at the same moment cannot both take the last bultos.
   const res = await env.DB.prepare(
-    `INSERT INTO feed_consumption (corral_id, food_type, bultos, consumed_at, note, created_by)
-     SELECT ?1, ?2, ?3, COALESCE(?4, ${TODAY_SQL}), ?5, ?6
+    `INSERT INTO feed_consumption (corral_id, food_type, bultos, consumed_at, note, created_by, kg_per_bulto)
+     SELECT ?1, ?2, ?3, COALESCE(?4, ${TODAY_SQL}), ?5, ?6, COALESCE((SELECT kg_per_bulto FROM food_types WHERE type = ?2), 40)
       WHERE (SELECT COALESCE(SUM(bultos_received),0) FROM food_lots WHERE type = ?2)
           - (SELECT COALESCE(SUM(bultos),0) FROM feed_consumption WHERE food_type = ?2) >= ?3 - 0.000001`
   )

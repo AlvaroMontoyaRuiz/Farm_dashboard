@@ -125,6 +125,7 @@ Apply the schema and seed to the **remote** database:
 ```bash
 npm run db:remote:init
 npm run db:remote:seed
+npm run db:remote:update
 ```
 
 ### 3. Create the Pages project
@@ -167,6 +168,31 @@ The app never lets the inventory go below zero:
 - **Deleting a delivery of bultos or an animal entry** is refused if those units were already used. Deleting a consumption or an exit is always allowed (it gives stock back).
 - Checks run on the server in a single atomic statement, so two workers saving at the same moment can't both slip through. The forms also show what is available and disable *Guardar* when the amount is too high.
 
+## Weights and feed conversion (conversión alimenticia)
+
+- In **Animales**, every entry and exit asks for the **total weight of the group** in kg (weigh them together).
+- In **Bultos → Tipos de bulto** the administrator sets the **kg per bulto** of each feed (demo value: 40 kg). The value is copied onto each feeding when it is saved, so changing it later only affects new feedings.
+- When animals **leave** a corral, the app calculates `FCR = kg of feed eaten ÷ kg of weight gained` and rates it:
+
+  | FCR | Rating |
+  |---|---|
+  | up to 2.5 | Buena |
+  | 2.6 – 3.0 | Regular |
+  | above 3.0 | Mala |
+
+- Animals enter together but leave in small groups, so each exit is charged with the feed an *average animal* of that corral has eaten since it arrived (animals that arrive later are not charged for earlier feed). The result is recalculated from the records, so deleting or correcting a record fixes it automatically. The maths is in `functions/_lib/fcr.js`.
+
+## Updating an existing database (migration 0003)
+
+Weights and kg per bulto need three new columns/tables. On a database that already has migrations 0001 and 0002, run **once**:
+
+```bash
+npm run db:remote:update     # real database
+npm run db:local:update      # local test copy
+```
+
+Until it is run, the app answers *"La base de datos necesita una actualización"*. New installs run `db:remote:init`, `db:remote:seed` and then `db:remote:update`.
+
 ## Start from zero (clean records and users)
 
 To hand the app over "like new" after testing, wipe all records and users but keep the 20 corrales:
@@ -181,7 +207,7 @@ Afterwards open `/setup` and create the administrator and workers again. `npm ru
 ## Roles
 
 - **admin**: can do everything — register food lots, see the deletion log, delete anyone's records.
-- **worker**: records consumption and ingreso/salida; can delete only their own records.
+- **worker**: sees only **Panel, Consumo and Animales** (records consumption and ingreso/salida with weights; can delete only their own records). Bultos, Historial diario and Historial eliminados are administrator-only, in the menu and on the server.
 
 ## Deletion behavior
 

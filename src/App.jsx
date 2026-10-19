@@ -63,20 +63,25 @@ export default function App() {
             <NavItem to="/" end>Panel</NavItem>
             <NavItem to="/consumo">Consumo</NavItem>
             <NavItem to="/animales">Animales</NavItem>
-            <NavItem to="/inventario">Bultos</NavItem>
-            <NavItem to="/diario">Historial diario</NavItem>
-            {user.role === 'admin' && <NavItem to="/eliminados">Historial eliminados</NavItem>}
+            {user.role === 'admin' && (
+              <>
+                <NavItem to="/inventario">Bultos</NavItem>
+                <NavItem to="/diario">Historial diario</NavItem>
+                <NavItem to="/eliminados">Historial eliminados</NavItem>
+              </>
+            )}
           </nav>
         </div>
       </header>
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-5 sm:py-7">
         <Routes>
-          <Route path="/" element={<Dashboard />} />
+          <Route path="/" element={<Dashboard user={user} />} />
           <Route path="/consumo" element={<Consumo user={user} />} />
           <Route path="/animales" element={<Animales user={user} />} />
-          <Route path="/inventario" element={<Inventario user={user} />} />
-          <Route path="/diario" element={<DailyLog />} />
+          {/* Workers only get the Panel, Consumo and Animales. */}
+          <Route path="/inventario" element={user.role === 'admin' ? <Inventario user={user} /> : <Navigate to="/" />} />
+          <Route path="/diario" element={user.role === 'admin' ? <DailyLog /> : <Navigate to="/" />} />
           <Route
             path="/eliminados"
             element={user.role === 'admin' ? <DeletionLog /> : <Navigate to="/" />}

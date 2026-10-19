@@ -7,7 +7,8 @@ import CorralGrid from '../components/CorralGrid.jsx';
 import ActivityFeed from '../components/ActivityFeed.jsx';
 import { num, bultosWord, longDay, timeLabel, TYPE_COLOR } from '../lib/format.js';
 
-export default function Dashboard() {
+export default function Dashboard({ user }) {
+  const isAdmin = user?.role === 'admin';
   const [d, setD] = useState(null);
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
@@ -121,8 +122,8 @@ export default function Dashboard() {
 
       {/* Stock */}
       <div className="grid md:grid-cols-2 gap-5">
-        <StockCard type="levante" data={d.stock.levante} linkTo="/inventario?tab=movimientos" />
-        <StockCard type="finalizador" data={d.stock.finalizador} linkTo="/inventario?tab=movimientos" />
+        <StockCard type="levante" data={d.stock.levante} linkTo={isAdmin ? '/inventario?tab=movimientos' : undefined} />
+        <StockCard type="finalizador" data={d.stock.finalizador} linkTo={isAdmin ? '/inventario?tab=movimientos' : undefined} />
       </div>
 
       {/* Trend + activity */}

@@ -1,8 +1,10 @@
 // GET  /api/animals?corralId=&from=&to=   — list movements (filterable)
-// POST /api/animals  { corralId, movement:'ingreso'|'salida', quantity, movementAt?, note? }
+// POST /api/animals  { corralId, movement:'ingreso'|'salida', quantity, weightKg, movementAt?, note? }
+//   weightKg = TOTAL weight of the group that enters/leaves. An exit answers with its feed conversion.
 
 import { requireUser, json } from '../_lib/auth.js';
 import { TODAY_SQL, todayStr } from '../_lib/time.js';
+import { exitAnalysis } from '../_lib/fcr.js';
 import { animalsIn, loadAnimalEvents, animalKey, newNegative, isDate, nowTs } from '../_lib/stock.js';
 
 export const onRequestGet = async ({ request, env }) => {
@@ -31,7 +33,7 @@ export const onRequestGet = async ({ request, env }) => {
   }
   const sql = `
     SELECT m.id, m.corral_id AS corralId, c.name AS corralName, m.movement,
-           m.quantity, m.movement_at AS movementAt, m.note,
+           m.quantity, m.weight_kg AS weightKg, m.movement_at AS movementAt, m.note,
            u.display_name AS createdBy, m.created_at AS createdAt
       FROM animal_movements m
       JOIN corrales c ON c.id = m.corral_id
@@ -40,7 +42,12 @@ export const onRequestGet = async ({ request, env }) => {
      ORDER BY m.movement_at DESC, m.id DESC
      LIMIT 500`;
   const rows = await env.DB.prepare(sql).bind(...binds).all();
-  return json({ movements: rows.results || [] });
+  const analysis = await exitAnalysis(env);
+  const movements = (rows.results || []).map((m) => ({
+    ...m,
+    conversion: m.movement === 'salida' ? analysis.get(m.id) || null : null,
+  }));
+  return json({ movements });
 };
 
 export const onRequestPost = async ({ request, env }) => {
@@ -50,12 +57,16 @@ export const onRequestPost = async ({ request, env }) => {
   } catch (r) {
     return r;
   }
-  const { corralId, movement, quantity, movementAt, note } =
+  const { corralId, movement, quantity, weightKg, movementAt, note } =
     (await request.json().catch(() => ({}))) || {};
   if (!corralId) return json({ error: 'corral_required' }, 400);
   if (!['ingreso', 'salida'].includes(movement)) return json({ error: 'bad_movement' }, 400);
   const q = Number(quantity);
   if (!Number.isInteger(q) || q <= 0) return json({ error: 'bad_quantity' }, 400);
+  const w = Number(weightKg);
+  if (weightKg === undefined || weightKg === null || weightKg === '' || !Number.isFinite(w) || w <= 0) return json({ error: 'bad_weight' }, 400);
+  const perAnimal = w / q;
+  if (perAnimal < 2 || perAnimal > 400) return json({ error: 'weight_implausible', perAnimal: Math.round(perAnimal * 10) / 10 }, 400);
   const today = todayStr();
   if (movementAt && (!isDate(movementAt) || movementAt > today)) return json({ error: 'bad_date' }, 400);
 
@@ -78,25 +89,27 @@ export const onRequestPost = async ({ request, env }) => {
 
     // Re-checked inside the INSERT so two simultaneous exits cannot both succeed.
     const res = await env.DB.prepare(
-      `INSERT INTO animal_movements (corral_id, movement, quantity, movement_at, note, created_by)
-       SELECT ?1, 'salida', ?2, COALESCE(?3, ${TODAY_SQL}), ?4, ?5
+      `INSERT INTO animal_movements (corral_id, movement, quantity, movement_at, note, created_by, weight_kg)
+       SELECT ?1, 'salida', ?2, COALESCE(?3, ${TODAY_SQL}), ?4, ?5, ?6
         WHERE (SELECT COALESCE(SUM(CASE WHEN movement='ingreso' THEN quantity ELSE -quantity END), 0)
                  FROM animal_movements WHERE corral_id = ?1) >= ?2`
     )
-      .bind(corral.id, q, movementAt || null, note || null, user.id)
+      .bind(corral.id, q, movementAt || null, note || null, user.id, w)
       .run();
     if (!res.meta?.changes) {
       const now = await animalsIn(env, corral.id);
       return json({ error: 'not_enough_animals', corral: corral.name, available: Math.max(0, now) }, 400);
     }
-    return json({ ok: true, id: res.meta?.last_row_id });
+    const id = res.meta?.last_row_id;
+    const conversion = (await exitAnalysis(env)).get(id) || null;
+    return json({ ok: true, id, conversion });
   }
 
   const res = await env.DB.prepare(
-    `INSERT INTO animal_movements (corral_id, movement, quantity, movement_at, note, created_by)
-     VALUES (?, 'ingreso', ?, COALESCE(?, ${TODAY_SQL}), ?, ?)`
+    `INSERT INTO animal_movements (corral_id, movement, quantity, movement_at, note, created_by, weight_kg)
+     VALUES (?, 'ingreso', ?, COALESCE(?, ${TODAY_SQL}), ?, ?, ?)`
   )
-    .bind(corral.id, q, movementAt || null, note || null, user.id)
+    .bind(corral.id, q, movementAt || null, note || null, user.id, w)
     .run();
   return json({ ok: true, id: res.meta?.last_row_id });
 };
