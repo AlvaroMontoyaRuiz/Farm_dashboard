@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { api } from '../lib/api.js';
 
-// Reusable delete button + confirmation modal. The user must type a reason
-// and press confirm. The deletion goes to the deletion_log on the server.
+// Delete button + confirmation dialog. The reason is optional; the deletion is
+// always copied to the deletion log on the server. On phones the dialog slides
+// up from the bottom so the buttons stay within thumb reach.
 export default function ConfirmDelete({ table, id, label = 'Eliminar', onDeleted }) {
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState('');
@@ -24,43 +25,52 @@ export default function ConfirmDelete({ table, id, label = 'Eliminar', onDeleted
     }
   }
 
+  function close() {
+    if (busy) return;
+    setOpen(false);
+    setErr('');
+  }
+
   return (
     <>
-      <button
-        className="text-red-700 hover:text-red-900 text-xs underline"
-        onClick={() => setOpen(true)}
-      >
+      <button type="button" className="btn-link-danger" onClick={() => setOpen(true)}>
         {label}
       </button>
       {open && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg w-full max-w-md p-5 shadow-lg">
-            <h3 className="font-semibold text-lg">¿Eliminar este registro?</h3>
-            <p className="text-sm text-farm-dark/70 mt-1">
-              La acción quedará guardada en el historial de eliminados. Escribe un motivo
-              (opcional pero recomendado).
+        <div
+          className="fixed inset-0 z-50 bg-ink/50 flex items-end sm:items-center justify-center sm:p-4"
+          onClick={close}
+          role="presentation"
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="del-title"
+            className="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl p-5 sm:p-6 shadow-panel text-left"
+            style={{ paddingBottom: 'max(1.25rem, env(safe-area-inset-bottom))' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 id="del-title" className="font-display font-bold text-xl">¿Eliminar este registro?</h3>
+            <p className="text-ink-soft mt-1.5">
+              Quedará guardado en el historial de eliminados. Escribe un motivo (opcional, pero recomendado).
             </p>
             <textarea
-              className="w-full mt-3 border rounded p-2 text-sm"
+              className="field mt-4 py-3"
               rows={3}
               placeholder="Motivo (ej: lo registré dos veces)"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
             />
-            {err && <div className="text-red-600 text-sm mt-2">{err}</div>}
-            <div className="flex justify-end gap-2 mt-4">
-              <button
-                className="px-3 py-1.5 rounded border"
-                onClick={() => setOpen(false)}
-                disabled={busy}
-              >
+            {err && (
+              <p role="alert" className="mt-3 rounded-xl bg-alert-bg text-alert text-sm px-3.5 py-2.5">
+                {err}
+              </p>
+            )}
+            <div className="grid grid-cols-2 gap-3 mt-5">
+              <button className="btn btn-quiet" onClick={close} disabled={busy}>
                 Cancelar
               </button>
-              <button
-                className="px-3 py-1.5 rounded bg-red-600 text-white disabled:opacity-50"
-                onClick={go}
-                disabled={busy}
-              >
+              <button className="btn btn-danger" onClick={go} disabled={busy}>
                 {busy ? 'Eliminando…' : 'Sí, eliminar'}
               </button>
             </div>

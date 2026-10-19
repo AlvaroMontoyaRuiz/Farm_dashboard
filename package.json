@@ -11,7 +11,9 @@
     "db:local:init": "wrangler d1 execute farm-inventory-db --local --file=./migrations/0001_init.sql",
     "db:local:seed": "wrangler d1 execute farm-inventory-db --local --file=./migrations/0002_seed.sql",
     "db:remote:init": "wrangler d1 execute farm-inventory-db --remote --file=./migrations/0001_init.sql",
-    "db:remote:seed": "wrangler d1 execute farm-inventory-db --remote --file=./migrations/0002_seed.sql"
+    "db:remote:seed": "wrangler d1 execute farm-inventory-db --remote --file=./migrations/0002_seed.sql",
+    "db:local:reset": "wrangler d1 execute farm-inventory-db --local --file=./scripts/reset-data.sql",
+    "db:remote:reset": "wrangler d1 execute farm-inventory-db --remote --file=./scripts/reset-data.sql"
   },
   "dependencies": {
     "react": "^18.3.1",

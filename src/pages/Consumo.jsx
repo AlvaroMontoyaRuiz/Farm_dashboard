@@ -5,7 +5,7 @@ import { Panel, Skeleton } from '../components/ui.jsx';
 import ConfirmDelete from '../components/ConfirmDelete.jsx';
 import { num, num2, bultosWord, shortDay, TYPE_LABEL, TYPE_COLOR } from '../lib/format.js';
 
-const field = 'w-full border border-line rounded-lg px-3 py-2 text-sm bg-white';
+const field = 'field';
 
 export default function Consumo() {
   // The Panel's corral tiles link here with ?corral=ID so the corral is already chosen.
@@ -73,7 +73,7 @@ export default function Consumo() {
         <Panel title="Registrar consumo" subtitle="Se descuenta de los bultos en bodega">
           <form onSubmit={submit} className="space-y-3">
             <label className="block text-sm">
-              <span className="text-ink-soft">Corral</span>
+              <span className="label">Corral</span>
               <select className={field} value={form.corralId} onChange={(e) => setForm({ ...form, corralId: e.target.value })} required>
                 <option value="">Elige un corral</option>
                 {corrales.map((c) => (
@@ -88,7 +88,7 @@ export default function Consumo() {
             </label>
 
             <label className="block text-sm">
-              <span className="text-ink-soft">Alimento</span>
+              <span className="label">Alimento</span>
               <select className={field} value={form.foodType} onChange={(e) => setForm({ ...form, foodType: e.target.value })}>
                 <option value="levante">Levante</option>
                 <option value="finalizador">Finalizador</option>
@@ -120,7 +120,7 @@ export default function Consumo() {
             </div>
 
             <label className="block text-sm">
-              <span className="text-ink-soft">Cantidad de bultos</span>
+              <span className="label">Cantidad de bultos</span>
               <input
                 className={field}
                 type="number"
@@ -134,13 +134,13 @@ export default function Consumo() {
               />
             </label>
             <label className="block text-sm">
-              <span className="text-ink-soft">Nota (opcional)</span>
+              <span className="label">Nota (opcional)</span>
               <input className={field} value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} />
             </label>
 
             {err && <p className="text-sm text-alert" role="alert">{err}</p>}
             {saved && <p className="text-sm text-farm-green font-medium" role="status">{saved}</p>}
-            <button disabled={!canSave} className="w-full bg-farm-green text-white py-2.5 rounded-lg text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed">
+            <button disabled={!canSave} className="btn btn-primary w-full">
               {busy ? 'Guardando…' : 'Guardar consumo'}
             </button>
           </form>
@@ -152,8 +152,8 @@ export default function Consumo() {
           ) : rows.length === 0 ? (
             <p className="text-sm text-ink-soft py-8 text-center">Aún no hay consumo registrado. Usa el formulario para guardar el primero.</p>
           ) : (
-            <div className="overflow-x-auto rounded-xl border border-line">
-              <table className="w-full text-sm min-w-[520px]">
+            <div className="rtable-wrap overflow-x-auto rounded-xl border border-line">
+              <table className="rtable w-full text-[15px]">
                 <thead className="bg-field text-left text-ink-soft">
                   <tr>
                     <th className="px-3 py-2 font-medium">Fecha</th>
@@ -167,15 +167,16 @@ export default function Consumo() {
                 <tbody>
                   {rows.map((r) => (
                     <tr key={r.id} className="border-t border-line">
-                      <td className="px-3 py-2 whitespace-nowrap">{shortDay(r.consumedAt)}</td>
-                      <td className="px-3 py-2 whitespace-nowrap">{r.corralName}</td>
-                      <td className="px-3 py-2 whitespace-nowrap">
+                      <td data-label="Fecha" className="px-3 py-2 whitespace-nowrap">{shortDay(r.consumedAt)}</td>
+                      <td data-label="Corral" className="px-3 py-2 whitespace-nowrap">{r.corralName}</td>
+                      <td data-label="Alimento" className="px-3 py-2 whitespace-nowrap">
+<span>
                         <span className="inline-block w-2.5 h-2.5 rounded-full mr-1.5" style={{ background: TYPE_COLOR[r.foodType] }} aria-hidden />
-                        {TYPE_LABEL[r.foodType]}
+                        {TYPE_LABEL[r.foodType]}</span>
                       </td>
-                      <td className="px-3 py-2 text-right font-semibold">{num2(r.bultos)}</td>
-                      <td className="px-3 py-2 text-ink-soft">{r.createdBy || '—'}</td>
-                      <td className="px-3 py-2 text-right">
+                      <td data-label="Bultos" className="px-3 py-2 text-right font-semibold">{num2(r.bultos)}</td>
+                      <td data-label="Registró" className="px-3 py-2 text-ink-soft">{r.createdBy || '—'}</td>
+                      <td data-label="" className="px-3 py-1 text-right">
                         <ConfirmDelete table="feed_consumption" id={r.id} onDeleted={reload} />
                       </td>
                     </tr>

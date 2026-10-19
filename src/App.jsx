@@ -48,18 +48,18 @@ export default function App() {
     <div className="min-h-full flex flex-col">
       <header className="bg-ink text-white sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="flex items-center justify-between h-14">
-            <div className="font-display font-semibold text-[18px] tracking-tight">Inventario Finca</div>
+          <div className="flex items-center justify-between h-14 md:h-16">
+            <div className="font-display font-semibold text-[18px] md:text-[20px] tracking-tight">Inventario Finca</div>
             <div className="flex items-center gap-3 text-sm">
-              <span className="text-white/80 hidden sm:inline">
+              <span className="text-white/80 hidden md:inline">
                 {user.displayName} <span className="text-white/50">({user.role === 'admin' ? 'Administrador' : 'Trabajador'})</span>
               </span>
-              <button onClick={logout} className="px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-xs font-medium">
+              <button onClick={logout} className="px-4 min-h-[40px] rounded-full bg-white/10 hover:bg-white/20 text-sm font-medium">
                 Salir
               </button>
             </div>
           </div>
-          <nav aria-label="Principal" className="flex gap-1 pb-2 -mx-1 px-1 overflow-x-auto no-scrollbar text-sm">
+          <nav aria-label="Principal" className="flex gap-1.5 pb-2.5 -mx-1 px-1 overflow-x-auto no-scrollbar text-[15px] md:text-base">
             <NavItem to="/" end>Panel</NavItem>
             <NavItem to="/consumo">Consumo</NavItem>
             <NavItem to="/animales">Animales</NavItem>
@@ -70,7 +70,7 @@ export default function App() {
         </div>
       </header>
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-5 sm:py-7">
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/consumo" element={<Consumo user={user} />} />
@@ -96,7 +96,7 @@ function NavItem({ to, end, children }) {
       to={to}
       end={end}
       className={({ isActive }) =>
-        `px-3 py-1.5 rounded-full whitespace-nowrap font-medium transition-colors ${
+        `px-4 min-h-[44px] inline-flex items-center rounded-full whitespace-nowrap font-medium transition-colors ${
           isActive ? 'bg-white text-ink' : 'text-white/75 hover:text-white hover:bg-white/10'
         }`
       }

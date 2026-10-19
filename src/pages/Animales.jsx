@@ -4,7 +4,7 @@ import { Panel, Skeleton } from '../components/ui.jsx';
 import ConfirmDelete from '../components/ConfirmDelete.jsx';
 import { num, shortDay } from '../lib/format.js';
 
-const field = 'w-full border border-line rounded-lg px-3 py-2 text-sm bg-white';
+const field = 'field';
 
 export default function Animales() {
   const [corrales, setCorrales] = useState([]);
@@ -68,7 +68,7 @@ export default function Animales() {
         <Panel title="Ingreso o salida" subtitle="Actualiza los animales del corral">
           <form onSubmit={submit} className="space-y-3">
             <label className="block text-sm">
-              <span className="text-ink-soft">Corral</span>
+              <span className="label">Corral</span>
               <select className={field} value={form.corralId} onChange={(e) => setForm({ ...form, corralId: e.target.value })} required>
                 <option value="">Elige un corral</option>
                 {corrales.map((c) => (
@@ -81,7 +81,7 @@ export default function Animales() {
             </label>
 
             <label className="block text-sm">
-              <span className="text-ink-soft">Movimiento</span>
+              <span className="label">Movimiento</span>
               <select className={field} value={form.movement} onChange={(e) => setForm({ ...form, movement: e.target.value })}>
                 <option value="ingreso">Ingreso (entran animales)</option>
                 <option value="salida">Salida (salen animales)</option>
@@ -107,7 +107,7 @@ export default function Animales() {
             )}
 
             <label className="block text-sm">
-              <span className="text-ink-soft">Cantidad de animales</span>
+              <span className="label">Cantidad de animales</span>
               <input
                 className={field}
                 type="number"
@@ -121,13 +121,13 @@ export default function Animales() {
               />
             </label>
             <label className="block text-sm">
-              <span className="text-ink-soft">Nota (opcional)</span>
+              <span className="label">Nota (opcional)</span>
               <input className={field} placeholder="Venta, traslado, compra…" value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} />
             </label>
 
             {err && <p className="text-sm text-alert" role="alert">{err}</p>}
             {saved && <p className="text-sm text-farm-green font-medium" role="status">{saved}</p>}
-            <button disabled={!canSave} className="w-full bg-farm-green text-white py-2.5 rounded-lg text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed">
+            <button disabled={!canSave} className="btn btn-primary w-full">
               {busy ? 'Guardando…' : 'Guardar movimiento'}
             </button>
           </form>
@@ -139,8 +139,8 @@ export default function Animales() {
           ) : rows.length === 0 ? (
             <p className="text-sm text-ink-soft py-8 text-center">Aún no hay movimientos. Registra el primer ingreso de animales con el formulario.</p>
           ) : (
-            <div className="overflow-x-auto rounded-xl border border-line">
-              <table className="w-full text-sm min-w-[520px]">
+            <div className="rtable-wrap overflow-x-auto rounded-xl border border-line">
+              <table className="rtable w-full text-[15px]">
                 <thead className="bg-field text-left text-ink-soft">
                   <tr>
                     <th className="px-3 py-2 font-medium">Fecha</th>
@@ -155,13 +155,13 @@ export default function Animales() {
                 <tbody>
                   {rows.map((r) => (
                     <tr key={r.id} className="border-t border-line">
-                      <td className="px-3 py-2 whitespace-nowrap">{shortDay(r.movementAt)}</td>
-                      <td className="px-3 py-2 whitespace-nowrap">{r.corralName}</td>
-                      <td className="px-3 py-2">{r.movement === 'ingreso' ? 'Ingreso' : 'Salida'}</td>
-                      <td className="px-3 py-2 text-right font-semibold">{r.movement === 'ingreso' ? '+' : '−'}{r.quantity}</td>
-                      <td className="px-3 py-2 text-ink-soft">{r.note || '—'}</td>
-                      <td className="px-3 py-2 text-ink-soft">{r.createdBy || '—'}</td>
-                      <td className="px-3 py-2 text-right">
+                      <td data-label="Fecha" className="px-3 py-2 whitespace-nowrap">{shortDay(r.movementAt)}</td>
+                      <td data-label="Corral" className="px-3 py-2 whitespace-nowrap">{r.corralName}</td>
+                      <td data-label="Movimiento" className="px-3 py-2">{r.movement === 'ingreso' ? 'Ingreso' : 'Salida'}</td>
+                      <td data-label="Animales" className="px-3 py-2 text-right font-semibold">{r.movement === 'ingreso' ? '+' : '−'}{r.quantity}</td>
+                      <td data-label="Nota" className="px-3 py-2 text-ink-soft">{r.note || '—'}</td>
+                      <td data-label="Registró" className="px-3 py-2 text-ink-soft">{r.createdBy || '—'}</td>
+                      <td data-label="" className="px-3 py-1 text-right">
                         <ConfirmDelete table="animal_movements" id={r.id} onDeleted={reload} />
                       </td>
                     </tr>

@@ -28,3 +28,52 @@ body {
 /* Hide scrollbar on the horizontal nav (still scrollable) */
 .no-scrollbar { scrollbar-width: none; }
 .no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* ---------- Touch-friendly building blocks (phones + tablets) ---------- */
+/* 16px text stops iOS from zooming into inputs; 48px tall targets suit fingers. */
+@layer components {
+  .field {
+    @apply w-full bg-white border border-line rounded-xl px-3.5 text-base text-ink placeholder:text-ink-faint;
+    min-height: 48px;
+  }
+  .field:focus { outline: 2px solid #1F7A4D; outline-offset: 1px; border-color: #1F7A4D; }
+  select.field { padding-right: 2rem; }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl font-semibold text-base transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+    min-height: 48px; padding: 0 1.25rem;
+  }
+  .btn-primary { @apply bg-farm-green text-white hover:bg-[#19673f]; }
+  .btn-quiet { @apply bg-white text-ink border border-line hover:bg-field; }
+  .btn-danger { @apply bg-alert text-white hover:bg-[#9a371a]; }
+  /* Small in-table action (Eliminar) with a bigger invisible hit area */
+  .btn-link-danger {
+    @apply text-alert font-medium text-sm underline underline-offset-2 rounded-lg px-2;
+    min-height: 40px; display: inline-flex; align-items: center;
+  }
+  .label { @apply block text-sm font-medium text-ink-soft mb-1.5; }
+}
+
+button, a, select, input { touch-action: manipulation; }
+body { -webkit-text-size-adjust: 100%; padding-bottom: env(safe-area-inset-bottom); }
+
+/* Tables become stacked cards on phones. Cells carry data-label="Column name". */
+@media (max-width: 639px) {
+  .rtable-wrap { border: 0 !important; border-radius: 0 !important; overflow: visible !important; }
+  .rtable { min-width: 0 !important; }
+  .rtable thead { display: none; }
+  .rtable, .rtable tbody, .rtable tr, .rtable td { display: block; width: 100%; }
+  .rtable tr {
+    background: #fff; border: 1px solid #E2E7DC !important; border-radius: 14px;
+    padding: 8px 14px; margin-bottom: 10px;
+  }
+  .rtable td {
+    display: flex; justify-content: space-between; align-items: center; gap: 16px;
+    padding: 6px 0 !important; text-align: right !important; white-space: normal !important;
+    border: 0 !important;
+  }
+  .rtable td::before {
+    content: attr(data-label); color: #5B6B60; font-size: 0.875rem; font-weight: 400; text-align: left; flex-shrink: 0;
+  }
+  .rtable td[data-label=""]::before { display: none; }
+  .rtable td[data-label=""] { justify-content: flex-end; }
+}

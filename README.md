@@ -167,6 +167,17 @@ The app never lets the inventory go below zero:
 - **Deleting a delivery of bultos or an animal entry** is refused if those units were already used. Deleting a consumption or an exit is always allowed (it gives stock back).
 - Checks run on the server in a single atomic statement, so two workers saving at the same moment can't both slip through. The forms also show what is available and disable *Guardar* when the amount is too high.
 
+## Start from zero (clean records and users)
+
+To hand the app over "like new" after testing, wipe all records and users but keep the 20 corrales:
+
+```bash
+npm run db:remote:reset      # the real, deployed database (cannot be undone)
+```
+
+No terminal? Open **Cloudflare → Workers & Pages → D1 → farm-inventory-db → Console**, paste the contents of `scripts/reset-data.sql` and run it.
+Afterwards open `/setup` and create the administrator and workers again. `npm run db:local:reset` does the same on your local test copy.
+
 ## Roles
 
 - **admin**: can do everything — register food lots, see the deletion log, delete anyone's records.
@@ -195,4 +206,4 @@ Expected: **$0/month** for your scale. If you ever exceed free limits, Pages Fun
 
 - `D1_ERROR: no such table: ...` → You skipped step 2.4 (binding) or step 2.3 (`db:remote:init`).
 - `invalid_session` after login → Your custom domain and `*.pages.dev` are different origins; stay on one.
-- Can't reach `/setup` → it's disabled once users exist. Reset by clearing the `users` table: `npx wrangler d1 execute farm-inventory-db --remote --command "DELETE FROM users;"`.
+- Can't reach `/setup` → it's disabled once users exist. Use `npm run db:remote:reset` (see *Start from zero*).

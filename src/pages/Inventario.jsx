@@ -13,7 +13,7 @@ const TABS = [
   { id: 'ingresos', label: 'Ingresos' },
 ];
 
-const field = 'w-full border border-line rounded-lg px-3 py-2 text-sm bg-white';
+const field = 'field';
 
 export default function Inventario({ user }) {
   const isAdmin = user.role === 'admin';
@@ -57,7 +57,7 @@ export default function Inventario({ user }) {
             role="tab"
             aria-selected={tab === t.id}
             onClick={() => setTab(t.id)}
-            className={`px-4 py-2.5 text-sm font-semibold whitespace-nowrap border-b-2 -mb-px transition-colors ${
+            className={`px-4 min-h-[48px] text-[15px] font-semibold whitespace-nowrap border-b-2 -mb-px transition-colors ${
               tab === t.id ? 'border-farm-green text-ink' : 'border-transparent text-ink-soft hover:text-ink'
             }`}
           >
@@ -126,7 +126,7 @@ function Movimientos({ inv, filters, setFilters }) {
     >
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
         <label className="text-sm">
-          <span className="text-ink-soft">Alimento</span>
+          <span className="label">Alimento</span>
           <select className={field} value={filters.type} onChange={set('type')}>
             <option value="">Todos</option>
             <option value="levante">Levante</option>
@@ -134,7 +134,7 @@ function Movimientos({ inv, filters, setFilters }) {
           </select>
         </label>
         <label className="text-sm">
-          <span className="text-ink-soft">Movimiento</span>
+          <span className="label">Movimiento</span>
           <select className={field} value={filters.kind} onChange={set('kind')}>
             <option value="">Todos</option>
             <option value="ingreso">Ingresos</option>
@@ -142,11 +142,11 @@ function Movimientos({ inv, filters, setFilters }) {
           </select>
         </label>
         <label className="text-sm">
-          <span className="text-ink-soft">Desde</span>
+          <span className="label">Desde</span>
           <input type="date" className={field} value={filters.from} onChange={set('from')} />
         </label>
         <label className="text-sm">
-          <span className="text-ink-soft">Hasta</span>
+          <span className="label">Hasta</span>
           <input type="date" className={field} value={filters.to} onChange={set('to')} />
         </label>
         <div className="flex items-end">
@@ -154,7 +154,7 @@ function Movimientos({ inv, filters, setFilters }) {
             type="button"
             disabled={!anyFilter}
             onClick={() => setFilters({ type: '', kind: '', from: '', to: '' })}
-            className="w-full border border-line rounded-lg px-3 py-2 text-sm font-medium disabled:opacity-40 hover:border-ink-faint"
+            className="btn btn-quiet w-full"
           >
             Quitar filtros
           </button>
@@ -169,8 +169,8 @@ function Movimientos({ inv, filters, setFilters }) {
         </p>
       ) : (
         <>
-          <div className="overflow-x-auto rounded-xl border border-line">
-            <table className="w-full text-sm min-w-[720px]">
+          <div className="rtable-wrap overflow-x-auto rounded-xl border border-line">
+            <table className="rtable w-full text-[15px] min-w-[720px]">
               <thead className="bg-field text-left text-ink-soft">
                 <tr>
                   <th className="px-3 py-2 font-medium">Fecha</th>
@@ -185,22 +185,23 @@ function Movimientos({ inv, filters, setFilters }) {
               <tbody>
                 {inv.ledger.map((r) => (
                   <tr key={r.key} className="border-t border-line align-top">
-                    <td className="px-3 py-2 whitespace-nowrap">{shortDay(r.date)}</td>
-                    <td className="px-3 py-2">{r.kind === 'ingreso' ? 'Ingreso' : 'Consumo'}</td>
-                    <td className="px-3 py-2 whitespace-nowrap">
+                    <td data-label="Fecha" className="px-3 py-2 whitespace-nowrap">{shortDay(r.date)}</td>
+                    <td data-label="Movimiento" className="px-3 py-2">{r.kind === 'ingreso' ? 'Ingreso' : 'Consumo'}</td>
+                    <td data-label="Alimento" className="px-3 py-2 whitespace-nowrap">
+<span>
                       <span className="inline-block w-2.5 h-2.5 rounded-full mr-1.5" style={{ background: TYPE_COLOR[r.type] }} aria-hidden />
-                      {TYPE_LABEL[r.type]}
+                      {TYPE_LABEL[r.type]}</span>
                     </td>
-                    <td className={`px-3 py-2 text-right whitespace-nowrap ${r.kind === 'ingreso' ? 'font-semibold' : ''}`}>
+                    <td data-label="Bultos" className={`px-3 py-2 text-right whitespace-nowrap ${r.kind === 'ingreso' ? 'font-semibold' : ''}`}>
                       {signed(r.kind === 'ingreso' ? r.qty : -r.qty)}
                     </td>
-                    <td className={`px-3 py-2 text-right font-semibold whitespace-nowrap ${r.balance < 0 ? 'text-alert' : ''}`}>
+                    <td data-label="Saldo" className={`px-3 py-2 text-right font-semibold whitespace-nowrap ${r.balance < 0 ? 'text-alert' : ''}`}>
                       {num2(r.balance)}
                     </td>
-                    <td className="px-3 py-2 text-ink-soft">
+                    <td data-label="Detalle" className="px-3 py-2 text-ink-soft">
                       {[r.corral, r.note].filter(Boolean).join(': ') || '—'}
                     </td>
-                    <td className="px-3 py-2 text-ink-soft whitespace-nowrap">
+                    <td data-label="Registró" className="px-3 py-2 text-ink-soft whitespace-nowrap">
                       {r.who || '—'}
                       <div className="text-xs text-ink-faint">{whenLabel(r.createdAt)}</div>
                     </td>
@@ -273,14 +274,14 @@ function Ingresos({ isAdmin, onChanged }) {
         <Panel title="Registrar ingreso" subtitle="Bultos que llegaron a la bodega">
           <form onSubmit={submit} className="space-y-3">
             <label className="block text-sm">
-              <span className="text-ink-soft">Alimento</span>
+              <span className="label">Alimento</span>
               <select className={field} value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
                 <option value="levante">Levante</option>
                 <option value="finalizador">Finalizador</option>
               </select>
             </label>
             <label className="block text-sm">
-              <span className="text-ink-soft">Cantidad de bultos</span>
+              <span className="label">Cantidad de bultos</span>
               <input
                 className={field}
                 type="number"
@@ -293,7 +294,7 @@ function Ingresos({ isAdmin, onChanged }) {
               />
             </label>
             <label className="block text-sm">
-              <span className="text-ink-soft">Fecha de llegada</span>
+              <span className="label">Fecha de llegada</span>
               <input
                 className={field}
                 type="date"
@@ -304,12 +305,12 @@ function Ingresos({ isAdmin, onChanged }) {
               />
             </label>
             <label className="block text-sm">
-              <span className="text-ink-soft">Nota (opcional)</span>
+              <span className="label">Nota (opcional)</span>
               <input className={field} placeholder="Proveedor, factura…" value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} />
             </label>
             {err && <p className="text-sm text-alert" role="alert">{err}</p>}
             {saved && <p className="text-sm text-farm-green font-medium" role="status">{saved}</p>}
-            <button disabled={busy} className="w-full bg-farm-green text-white py-2.5 rounded-lg text-sm font-semibold disabled:opacity-60">
+            <button disabled={busy} className="btn btn-primary w-full">
               {busy ? 'Guardando…' : 'Guardar ingreso'}
             </button>
           </form>
@@ -328,8 +329,8 @@ function Ingresos({ isAdmin, onChanged }) {
             Aún no hay ingresos. {isAdmin ? 'Registra el primero con el formulario.' : 'El administrador los registrará aquí.'}
           </p>
         ) : (
-          <div className="overflow-x-auto rounded-xl border border-line">
-            <table className="w-full text-sm min-w-[480px]">
+          <div className="rtable-wrap overflow-x-auto rounded-xl border border-line">
+            <table className="rtable w-full text-[15px]">
               <thead className="bg-field text-left text-ink-soft">
                 <tr>
                   <th className="px-3 py-2 font-medium">Fecha</th>
@@ -343,16 +344,17 @@ function Ingresos({ isAdmin, onChanged }) {
               <tbody>
                 {rows.map((r) => (
                   <tr key={r.id} className="border-t border-line">
-                    <td className="px-3 py-2 whitespace-nowrap">{shortDay(r.receivedAt)}</td>
-                    <td className="px-3 py-2 whitespace-nowrap">
+                    <td data-label="Fecha" className="px-3 py-2 whitespace-nowrap">{shortDay(r.receivedAt)}</td>
+                    <td data-label="Alimento" className="px-3 py-2 whitespace-nowrap">
+<span>
                       <span className="inline-block w-2.5 h-2.5 rounded-full mr-1.5" style={{ background: TYPE_COLOR[r.type] }} aria-hidden />
-                      {TYPE_LABEL[r.type]}
+                      {TYPE_LABEL[r.type]}</span>
                     </td>
-                    <td className="px-3 py-2 text-right font-semibold">{r.bultosReceived}</td>
-                    <td className="px-3 py-2 text-ink-soft">{r.note || '—'}</td>
-                    <td className="px-3 py-2 text-ink-soft">{r.createdBy || '—'}</td>
+                    <td data-label="Bultos" className="px-3 py-2 text-right font-semibold">{r.bultosReceived}</td>
+                    <td data-label="Nota" className="px-3 py-2 text-ink-soft">{r.note || '—'}</td>
+                    <td data-label="Registró" className="px-3 py-2 text-ink-soft">{r.createdBy || '—'}</td>
                     {isAdmin && (
-                      <td className="px-3 py-2 text-right">
+                      <td data-label="" className="px-3 py-1 text-right">
                         <ConfirmDelete table="food_lots" id={r.id} onDeleted={afterChange} />
                       </td>
                     )}

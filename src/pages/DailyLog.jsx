@@ -1,120 +1,138 @@
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api.js';
-import { Card } from '../components/Card.jsx';
-import { localToday } from '../lib/format.js';
+import { Panel, Skeleton } from '../components/ui.jsx';
+import { localToday, longDay, num2, TYPE_LABEL, TYPE_COLOR } from '../lib/format.js';
 
 export default function DailyLog() {
   const today = localToday();
   const [date, setDate] = useState(today);
   const [data, setData] = useState(null);
+  const [err, setErr] = useState('');
 
   useEffect(() => {
-    api.get(`/api/daily-log?date=${date}`).then(setData);
+    setData(null);
+    setErr('');
+    api.get(`/api/daily-log?date=${date}`).then(setData).catch((e) => setErr(e.message));
   }, [date]);
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <label className="text-sm text-farm-dark/70">Fecha:</label>
-        <input
-          type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          className="border rounded px-2 py-1 text-sm"
-        />
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="font-display font-bold text-[30px] leading-tight">Historial diario</h1>
+          <p className="text-ink-soft">Todo lo que pasó en la finca en un día.</p>
+        </div>
+        <div className="w-full sm:w-56">
+          <label htmlFor="fecha" className="label">Fecha</label>
+          <input id="fecha" type="date" value={date} max={today} onChange={(e) => e.target.value && setDate(e.target.value)} className="field" />
+        </div>
       </div>
 
-      {!data ? (
-        <div>Cargando…</div>
-      ) : (
+      {err && <p className="text-alert">No se pudo cargar: {err}</p>}
+      {!data && !err ? (
+        <Skeleton className="h-64" />
+      ) : data ? (
         <>
-          <Card title={`Consumo por corral — ${data.date}`}>
-            <table className="w-full text-sm">
-              <thead className="text-left text-xs text-farm-dark/70">
-                <tr>
-                  <th className="py-1">Corral</th>
-                  <th>Bultos Levante</th>
-                  <th>Bultos Finalizador</th>
-                  <th>Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.totalsPerCorral.map((r) => (
-                  <tr key={r.corralId} className="border-t border-farm-sand/40">
-                    <td className="py-1">{r.corralName}</td>
-                    <td>{r.levante.toFixed(2)}</td>
-                    <td>{r.finalizador.toFixed(2)}</td>
-                    <td className="font-semibold">{(r.levante + r.finalizador).toFixed(2)}</td>
-                  </tr>
-                ))}
-                {data.totalsPerCorral.length === 0 && (
-                  <tr>
-                    <td colSpan={4} className="py-4 text-center text-farm-dark/50">
-                      Sin consumo registrado este día.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </Card>
-
-          <Card title="Movimientos de animales ese día">
-            {data.movements.length === 0 ? (
-              <div className="text-farm-dark/50 text-sm">Sin movimientos.</div>
+          <Panel title="Consumo por corral" subtitle={longDay(data.date)}>
+            {data.totalsPerCorral.length === 0 ? (
+              <Empty>No se registró consumo este día.</Empty>
             ) : (
-              <table className="w-full text-sm">
-                <thead className="text-left text-xs text-farm-dark/70">
-                  <tr>
-                    <th className="py-1">Corral</th>
-                    <th>Tipo</th>
-                    <th>Cantidad</th>
-                    <th>Por</th>
-                    <th>Nota</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.movements.map((r) => (
-                    <tr key={r.id} className="border-t border-farm-sand/40">
-                      <td className="py-1">{r.corralName}</td>
-                      <td>{r.movement}</td>
-                      <td>{r.quantity}</td>
-                      <td className="text-xs text-farm-dark/70">{r.createdBy}</td>
-                      <td>{r.note}</td>
+              <div className="rtable-wrap overflow-x-auto rounded-xl border border-line">
+                <table className="rtable w-full text-[15px]">
+                  <thead className="bg-field text-left text-ink-soft">
+                    <tr>
+                      <th className="px-3 py-2 font-medium">Corral</th>
+                      <th className="px-3 py-2 font-medium text-right">Levante</th>
+                      <th className="px-3 py-2 font-medium text-right">Finalizador</th>
+                      <th className="px-3 py-2 font-medium text-right">Total</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {data.totalsPerCorral.map((r) => (
+                      <tr key={r.corralId} className="border-t border-line">
+                        <td data-label="Corral" className="px-3 py-2 whitespace-nowrap">{r.corralName}</td>
+                        <td data-label="Levante" className="px-3 py-2 text-right">{num2(r.levante)}</td>
+                        <td data-label="Finalizador" className="px-3 py-2 text-right">{num2(r.finalizador)}</td>
+                        <td data-label="Total" className="px-3 py-2 text-right font-semibold">{num2(r.levante + r.finalizador)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
-          </Card>
+          </Panel>
 
-          <Card title="Lotes de comida recibidos ese día">
-            {data.lots.length === 0 ? (
-              <div className="text-farm-dark/50 text-sm">Sin ingresos de bultos.</div>
-            ) : (
-              <table className="w-full text-sm">
-                <thead className="text-left text-xs text-farm-dark/70">
-                  <tr>
-                    <th className="py-1">Tipo</th>
-                    <th>Bultos</th>
-                    <th>Nota</th>
-                    <th>Por</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.lots.map((r) => (
-                    <tr key={r.id} className="border-t border-farm-sand/40">
-                      <td className="py-1 capitalize">{r.type}</td>
-                      <td>{r.bultosReceived}</td>
-                      <td>{r.note}</td>
-                      <td className="text-xs text-farm-dark/70">{r.createdBy}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </Card>
+          <div className="grid lg:grid-cols-2 gap-5">
+            <Panel title="Movimientos de animales">
+              {data.movements.length === 0 ? (
+                <Empty>No hubo ingresos ni salidas de animales.</Empty>
+              ) : (
+                <div className="rtable-wrap overflow-x-auto rounded-xl border border-line">
+                  <table className="rtable w-full text-[15px]">
+                    <thead className="bg-field text-left text-ink-soft">
+                      <tr>
+                        <th className="px-3 py-2 font-medium">Corral</th>
+                        <th className="px-3 py-2 font-medium">Movimiento</th>
+                        <th className="px-3 py-2 font-medium text-right">Animales</th>
+                        <th className="px-3 py-2 font-medium">Nota</th>
+                        <th className="px-3 py-2 font-medium">Registró</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.movements.map((r) => (
+                        <tr key={r.id} className="border-t border-line">
+                          <td data-label="Corral" className="px-3 py-2 whitespace-nowrap">{r.corralName}</td>
+                          <td data-label="Movimiento" className="px-3 py-2">{r.movement === 'ingreso' ? 'Ingreso' : 'Salida'}</td>
+                          <td data-label="Animales" className="px-3 py-2 text-right font-semibold">{r.movement === 'ingreso' ? '+' : '−'}{r.quantity}</td>
+                          <td data-label="Nota" className="px-3 py-2 text-ink-soft">{r.note || '—'}</td>
+                          <td data-label="Registró" className="px-3 py-2 text-ink-soft">{r.createdBy || '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </Panel>
+
+            <Panel title="Bultos recibidos">
+              {data.lots.length === 0 ? (
+                <Empty>No llegaron bultos este día.</Empty>
+              ) : (
+                <div className="rtable-wrap overflow-x-auto rounded-xl border border-line">
+                  <table className="rtable w-full text-[15px]">
+                    <thead className="bg-field text-left text-ink-soft">
+                      <tr>
+                        <th className="px-3 py-2 font-medium">Alimento</th>
+                        <th className="px-3 py-2 font-medium text-right">Bultos</th>
+                        <th className="px-3 py-2 font-medium">Nota</th>
+                        <th className="px-3 py-2 font-medium">Registró</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.lots.map((r) => (
+                        <tr key={r.id} className="border-t border-line">
+                          <td data-label="Alimento" className="px-3 py-2 whitespace-nowrap">
+<span>
+                            <span className="inline-block w-2.5 h-2.5 rounded-full mr-1.5" style={{ background: TYPE_COLOR[r.type] }} aria-hidden />
+                            {TYPE_LABEL[r.type]}</span>
+                          </td>
+                          <td data-label="Bultos" className="px-3 py-2 text-right font-semibold">{r.bultosReceived}</td>
+                          <td data-label="Nota" className="px-3 py-2 text-ink-soft">{r.note || '—'}</td>
+                          <td data-label="Registró" className="px-3 py-2 text-ink-soft">{r.createdBy || '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </Panel>
+          </div>
         </>
-      )}
+      ) : null}
     </div>
   );
+}
+
+function Empty({ children }) {
+  return <p className="text-sm text-ink-soft py-6 text-center">{children}</p>;
 }
