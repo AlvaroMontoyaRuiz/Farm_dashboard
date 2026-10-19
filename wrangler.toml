@@ -8,4 +8,4 @@ pages_build_output_dir = "./dist"
 [[d1_databases]]
 binding = "DB"
 database_name = "farm-inventory-db"
-database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
+database_id = "7cd11ab2-1cb5-43d5-8181-519f4e31d1ca"
