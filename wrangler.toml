@@ -1,0 +1,11 @@
+name = "farm-inventory"
+compatibility_date = "2026-01-01"
+pages_build_output_dir = "./dist"
+
+# D1 database binding — the database_id gets filled in after you run
+# `wrangler d1 create farm-inventory-db` (see README). Leave the placeholder
+# until then; Cloudflare Pages will show the id in the dashboard too.
+[[d1_databases]]
+binding = "DB"
+database_name = "farm-inventory-db"
+database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"

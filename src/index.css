@@ -1,0 +1,6 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, #root { height: 100%; }
+body { @apply bg-farm-beige text-farm-dark antialiased; font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto; }
