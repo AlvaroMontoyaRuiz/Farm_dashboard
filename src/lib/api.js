@@ -24,6 +24,11 @@ const ERRORS_ES = {
   bad_id: 'ID no válido.',
   not_found: 'El registro no existe.',
   not_your_record: 'Solo puedes eliminar los registros que creaste.',
+  db_binding_missing:
+    'La base de datos no está conectada al proyecto (falta el binding "DB" en Cloudflare).',
+  db_not_initialized:
+    'La base de datos está vacía: faltan las tablas. Hay que ejecutar las migraciones.',
+  server_error: 'Error interno del servidor. Intenta de nuevo.',
 };
 
 export function translateError(code) {
