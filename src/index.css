@@ -3,4 +3,28 @@
 @tailwind utilities;
 
 html, body, #root { height: 100%; }
-body { @apply bg-farm-beige text-farm-dark antialiased; font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto; }
+body {
+  @apply bg-field text-ink antialiased;
+  font-family: theme('fontFamily.sans');
+  font-variant-numeric: tabular-nums;
+}
+
+/* Visible keyboard focus everywhere */
+:focus-visible { outline: 2px solid #1F7A4D; outline-offset: 2px; border-radius: 6px; }
+
+/* Skeleton shimmer for loading states */
+@keyframes pulse-soft { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
+.skeleton { background: #E7ECE2; border-radius: 12px; animation: pulse-soft 1.4s ease-in-out infinite; }
+
+/* The one entrance: panels settle in once on first load. */
+@keyframes settle { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.settle { animation: settle .35s ease-out both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton, .settle { animation: none; }
+  * { transition-duration: 0.01ms !important; }
+}
+
+/* Hide scrollbar on the horizontal nav (still scrollable) */
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }

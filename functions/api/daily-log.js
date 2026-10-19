@@ -3,6 +3,7 @@
 // animal movements, food lots received. For the admin's daily tracker.
 
 import { requireUser, json } from '../_lib/auth.js';
+import { todayStr } from '../_lib/time.js';
 
 export const onRequestGet = async ({ request, env }) => {
   try {
@@ -20,7 +21,7 @@ export const onRequestGet = async ({ request, env }) => {
        FROM feed_consumption fc
        JOIN corrales c ON c.id = fc.corral_id
   LEFT JOIN users u ON u.id = fc.created_by
-      WHERE fc.consumed_at = COALESCE(?, date('now'))
+      WHERE fc.consumed_at = COALESCE(?, date('now','-5 hours'))
       ORDER BY fc.created_at`
   )
     .bind(date)
@@ -33,7 +34,7 @@ export const onRequestGet = async ({ request, env }) => {
        FROM animal_movements m
        JOIN corrales c ON c.id = m.corral_id
   LEFT JOIN users u ON u.id = m.created_by
-      WHERE m.movement_at = COALESCE(?, date('now'))
+      WHERE m.movement_at = COALESCE(?, date('now','-5 hours'))
       ORDER BY m.created_at`
   )
     .bind(date)
@@ -44,7 +45,7 @@ export const onRequestGet = async ({ request, env }) => {
             u.display_name AS createdBy, f.created_at AS createdAt
        FROM food_lots f
   LEFT JOIN users u ON u.id = f.created_by
-      WHERE f.received_at = COALESCE(?, date('now'))
+      WHERE f.received_at = COALESCE(?, date('now','-5 hours'))
       ORDER BY f.created_at`
   )
     .bind(date)
@@ -59,7 +60,7 @@ export const onRequestGet = async ({ request, env }) => {
   }
 
   return json({
-    date: date || new Date().toISOString().slice(0, 10),
+    date: date || todayStr(),
     consumption: cons.results || [],
     movements: mov.results || [],
     lots: lots.results || [],

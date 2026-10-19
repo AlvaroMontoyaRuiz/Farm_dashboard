@@ -45,7 +45,7 @@ export const onRequestGet = async ({ request, env }) => {
   // today's consumption
   const today = await env.DB.prepare(
     `SELECT food_type, COALESCE(SUM(bultos), 0) AS b
-       FROM feed_consumption WHERE consumed_at = date('now') GROUP BY food_type`
+       FROM feed_consumption WHERE consumed_at = date('now','-5 hours') GROUP BY food_type`
   ).all();
   const todayCons = { levante: 0, finalizador: 0 };
   for (const r of today.results || []) todayCons[r.food_type] = r.b;

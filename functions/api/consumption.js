@@ -61,7 +61,7 @@ export const onRequestPost = async ({ request, env }) => {
 
   const res = await env.DB.prepare(
     `INSERT INTO feed_consumption (corral_id, food_type, bultos, consumed_at, note, created_by)
-     VALUES (?, ?, ?, COALESCE(?, date('now')), ?, ?)`
+     VALUES (?, ?, ?, COALESCE(?, date('now','-5 hours')), ?, ?)`
   )
     .bind(Number(corralId), foodType, b, consumedAt || null, note || null, user.id)
     .run();

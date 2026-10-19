@@ -38,7 +38,7 @@ export const onRequestPost = async ({ request, env }) => {
 
   const res = await env.DB.prepare(
     `INSERT INTO food_lots (type, bultos_received, received_at, note, created_by)
-     VALUES (?, ?, COALESCE(?, date('now')), ?, ?)`
+     VALUES (?, ?, COALESCE(?, date('now','-5 hours')), ?, ?)`
   )
     .bind(type, Math.round(n), receivedAt || null, note || null, user.id)
     .run();

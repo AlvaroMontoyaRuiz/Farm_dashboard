@@ -69,7 +69,7 @@ export const onRequestPost = async ({ request, env }) => {
 
   const res = await env.DB.prepare(
     `INSERT INTO animal_movements (corral_id, movement, quantity, movement_at, note, created_by)
-     VALUES (?, ?, ?, COALESCE(?, date('now')), ?, ?)`
+     VALUES (?, ?, ?, COALESCE(?, date('now','-5 hours')), ?, ?)`
   )
     .bind(Number(corralId), movement, q, movementAt || null, note || null, user.id)
     .run();

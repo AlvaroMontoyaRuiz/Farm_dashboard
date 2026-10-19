@@ -38,10 +38,13 @@ farm-inventory/
 │   ├── 0001_init.sql              # schema
 │   └── 0002_seed.sql              # 20 corrales (no users — see Setup below)
 ├── functions/                     # Pages Functions (your backend)
-│   ├── _lib/auth.js
+│   ├── _lib/auth.js, time.js      # time.js = Colombia time (UTC-5) for "today"
 │   └── api/
 │       ├── auth/{setup,login,logout,me}.js
-│       ├── summary.js             # dashboard numbers
+│       ├── dashboard.js           # everything the Panel page shows (one request)
+│       ├── inventory.js           # bultos ledger (kardex) + stock history
+│       ├── _middleware.js         # clear errors if DB binding / tables are missing
+│       ├── summary.js             # (legacy) basic totals
 │       ├── corrales.js
 │       ├── food-lots.js           # inventario bultos (admin writes)
 │       ├── animals.js             # ingreso / salida
@@ -55,6 +58,18 @@ farm-inventory/
     ├── components/{Card,ConfirmDelete}.jsx
     └── pages/{Login,Setup,Dashboard,Consumo,Animales,Inventario,DailyLog,DeletionLog}.jsx
 ```
+
+## Screens
+
+- **Panel**: animals, corrales fed today, today's consumption, stock per feed type with an estimate of
+  how many days it will last, daily consumption chart (7/14/30 days), recent activity, and a grid of
+  all corrales. Tapping a corral opens "Consumo" with that corral already selected.
+- **Bultos**: *Resumen* (stock, this month's in/out, stock-over-time chart), *Movimientos* (every ingreso
+  and consumo with the balance after each one, filterable), *Ingresos* (admin registers deliveries).
+- Stock is never stored; it is always `received - consumed`, so deleting or fixing a record corrects
+  every balance automatically. "Days left" uses the average of the last 7 full days (today is excluded
+  because it is still in progress).
+- "Today" is always Colombia time (UTC-5), not UTC, so entries made after 7 pm land on the right day.
 
 ---
 

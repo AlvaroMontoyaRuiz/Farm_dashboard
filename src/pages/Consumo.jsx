@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { api } from '../lib/api.js';
 import { Card } from '../components/Card.jsx';
 import ConfirmDelete from '../components/ConfirmDelete.jsx';
 
 export default function Consumo() {
+  // The Panel's corral tiles link here with ?corral=ID so the corral is already chosen.
+  const [params] = useSearchParams();
   const [corrales, setCorrales] = useState([]);
   const [rows, setRows] = useState([]);
-  const [form, setForm] = useState({ corralId: '', foodType: 'levante', bultos: '', note: '' });
+  const [form, setForm] = useState({ corralId: params.get('corral') || '', foodType: 'levante', bultos: '', note: '' });
   const [err, setErr] = useState('');
 
   async function reload() {

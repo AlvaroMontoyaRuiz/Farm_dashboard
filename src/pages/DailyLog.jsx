@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api.js';
 import { Card } from '../components/Card.jsx';
+import { localToday } from '../lib/format.js';
 
 export default function DailyLog() {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localToday();
   const [date, setDate] = useState(today);
   const [data, setData] = useState(null);
 
