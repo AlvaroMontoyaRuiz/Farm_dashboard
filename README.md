@@ -157,6 +157,16 @@ Pages → Custom domains → Add. Cloudflare manages SSL automatically if your d
 
 ---
 
+## Inventory rules (no negative stock)
+
+The app never lets the inventory go below zero:
+
+- **Feeding** can't use more bultos than are in storage (received − consumed, per food type).
+- **Animal exits** can't take out more animals than the corral has.
+- **Backdated entries** are refused if they would leave a negative balance on any past day.
+- **Deleting a delivery of bultos or an animal entry** is refused if those units were already used. Deleting a consumption or an exit is always allowed (it gives stock back).
+- Checks run on the server in a single atomic statement, so two workers saving at the same moment can't both slip through. The forms also show what is available and disable *Guardar* when the amount is too high.
+
 ## Roles
 
 - **admin**: can do everything — register food lots, see the deletion log, delete anyone's records.

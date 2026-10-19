@@ -14,6 +14,7 @@
 
 import { requireUser, json } from '../_lib/auth.js';
 import { todayStr, lastDays, avgWindow } from '../_lib/time.js';
+import { compareEvents } from '../_lib/stock.js';
 
 const TYPES = ['levante', 'finalizador'];
 const r2 = (n) => Math.round(Number(n || 0) * 100) / 100;
@@ -51,12 +52,8 @@ export const onRequestGet = async ({ request, env }) => {
     ...(lotsRes.results || []).map((x) => ({ ...x, kind: 'ingreso', corral: null, delta: Number(x.qty) })),
     ...(consRes.results || []).map((x) => ({ ...x, kind: 'consumo', delta: -Number(x.qty) })),
   ];
-  events.sort(
-    (a, b) =>
-      a.date.localeCompare(b.date) ||
-      String(a.createdAt).localeCompare(String(b.createdAt)) ||
-      (a.kind === b.kind ? a.id - b.id : a.kind === 'ingreso' ? -1 : 1)
-  );
+  // same-day order: deliveries first (see compareEvents), so balances here match the rules
+  events.sort(compareEvents);
 
   // running balance per type
   const bal = { levante: 0, finalizador: 0 };

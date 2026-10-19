@@ -1,6 +1,8 @@
 // Tiny fetch wrapper. All API calls go through here so cookies travel.
 // Also translates server error codes into Spanish messages for the UI.
 
+import { num, bultosWord, shortDay, TYPE_LABEL } from './format.js';
+
 const ERRORS_ES = {
   not_authenticated: 'Debes iniciar sesión.',
   invalid_session: 'Tu sesión ya no es válida. Vuelve a iniciar sesión.',
@@ -19,7 +21,27 @@ const ERRORS_ES = {
   bad_bultos: 'Cantidad de bultos inválida.',
   bad_movement: 'Tipo de movimiento inválido.',
   corral_required: 'Debes seleccionar un corral.',
-  not_enough_animals: 'No hay suficientes animales en el corral para esa salida.',
+  // These four get the numbers from the server, so the message says exactly what is available.
+  not_enough_stock: (d) => {
+    const t = (TYPE_LABEL[d.foodType] || 'alimento').toLowerCase();
+    return d.available > 0
+      ? `Solo quedan ${num(d.available)} ${bultosWord(d.available)} de ${t} en bodega.`
+      : `No hay bultos de ${t} en bodega. El administrador debe registrar un ingreso.`;
+  },
+  not_enough_animals: (d) =>
+    d.available > 0
+      ? `Solo hay ${num(d.available)} ${d.available === 1 ? 'animal' : 'animales'} en ${d.corral || 'este corral'}.`
+      : `${d.corral || 'Este corral'} no tiene animales para sacar.`,
+  breaks_history: (d) =>
+    d.scope === 'animals'
+      ? `Con esa fecha, ${d.corral || 'el corral'} quedaría con animales negativos el ${shortDay(d.date)}.`
+      : `Con esa fecha, el inventario de ${(TYPE_LABEL[d.foodType] || 'alimento').toLowerCase()} quedaría en negativo el ${shortDay(d.date)}.`,
+  would_go_negative: (d) =>
+    d.scope === 'animals'
+      ? 'No se puede eliminar este ingreso de animales: ya salieron animales de ese corral y quedaría en negativo.'
+      : `No se puede eliminar este ingreso: esos bultos ya se consumieron y el inventario de ${(TYPE_LABEL[d.foodType] || 'alimento').toLowerCase()} quedaría en negativo.`,
+  bad_date: 'La fecha no es válida.',
+  corral_not_found: 'El corral no existe.',
   bad_table: 'Tabla no válida.',
   bad_id: 'ID no válido.',
   not_found: 'El registro no existe.',
@@ -31,9 +53,11 @@ const ERRORS_ES = {
   server_error: 'Error interno del servidor. Intenta de nuevo.',
 };
 
-export function translateError(code) {
+export function translateError(code, data) {
   if (!code) return 'Ocurrió un error.';
-  return ERRORS_ES[code] || `Error: ${code}`;
+  const m = ERRORS_ES[code];
+  if (typeof m === 'function') return m(data || {});
+  return m || `Error: ${code}`;
 }
 
 async function request(method, path, body) {
@@ -52,7 +76,7 @@ async function request(method, path, body) {
   }
   if (!res.ok) {
     const code = data?.error || `HTTP_${res.status}`;
-    const err = new Error(translateError(code));
+    const err = new Error(translateError(code, data));
     err.status = res.status;
     err.code = code;
     err.data = data;

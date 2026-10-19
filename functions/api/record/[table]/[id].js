@@ -4,6 +4,7 @@
 // their own rows; admin can delete anyone's.
 
 import { requireUser, json } from '../../../_lib/auth.js';
+import { loadFeedEvents, feedKey, loadAnimalEvents, animalKey, newNegative } from '../../../_lib/stock.js';
 
 const ALLOWED = new Set(['feed_consumption', 'animal_movements', 'food_lots']);
 
@@ -27,6 +28,18 @@ export const onRequestDelete = async ({ request, env, params }) => {
 
   if (user.role !== 'admin' && row.created_by !== user.id) {
     return json({ error: 'not_your_record' }, 403);
+  }
+
+  // Deleting something that ADDED stock (a delivery, an animal entry) can leave
+  // the balance negative if that stock was already used. Deleting consumption or
+  // an exit only gives stock back, so it is always allowed.
+  if (table === 'food_lots') {
+    const hit = newNegative(await loadFeedEvents(env), feedKey, { removeUid: `food_lots:${id}` });
+    if (hit) return json({ error: 'would_go_negative', scope: 'food', foodType: hit.split('|')[0], date: hit.split('|')[1] }, 409);
+  }
+  if (table === 'animal_movements' && row.movement === 'ingreso') {
+    const hit = newNegative(await loadAnimalEvents(env, row.corral_id), animalKey, { removeUid: `animal_movements:${id}` });
+    if (hit) return json({ error: 'would_go_negative', scope: 'animals', date: hit.split('|')[1] }, 409);
   }
 
   await env.DB.batch([

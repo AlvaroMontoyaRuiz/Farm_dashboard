@@ -1,125 +1,176 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { api } from '../lib/api.js';
-import { Card } from '../components/Card.jsx';
+import { Panel, Skeleton } from '../components/ui.jsx';
 import ConfirmDelete from '../components/ConfirmDelete.jsx';
+import { num, shortDay } from '../lib/format.js';
+
+const field = 'w-full border border-line rounded-lg px-3 py-2 text-sm bg-white';
 
 export default function Animales() {
   const [corrales, setCorrales] = useState([]);
-  const [rows, setRows] = useState([]);
+  const [rows, setRows] = useState(null);
+  const [avail, setAvail] = useState(null); // { animals: {corralId: n} }
   const [form, setForm] = useState({ corralId: '', movement: 'ingreso', quantity: '', note: '' });
   const [err, setErr] = useState('');
+  const [saved, setSaved] = useState('');
+  const [busy, setBusy] = useState(false);
 
-  async function reload() {
-    const r = await api.get('/api/animals');
-    setRows(r.movements);
-  }
+  const reload = useCallback(async () => {
+    const [m, s] = await Promise.all([api.get('/api/animals'), api.get('/api/stock')]);
+    setRows(m.movements);
+    setAvail(s);
+  }, []);
+
   useEffect(() => {
     api.get('/api/corrales').then((r) => setCorrales(r.corrales));
     reload();
-  }, []);
+  }, [reload]);
+
+  const corral = corrales.find((c) => String(c.id) === String(form.corralId));
+  const here = avail && form.corralId ? avail.animals[form.corralId] ?? 0 : null;
+  const qty = Number(form.quantity) || 0;
+  const isOut = form.movement === 'salida';
+  const nothingToRemove = isOut && here !== null && here <= 0;
+  const over = isOut && here !== null && qty > here;
+  const canSave = !busy && form.corralId && qty > 0 && Number.isInteger(qty) && !over && !nothingToRemove;
 
   async function submit(e) {
     e.preventDefault();
     setErr('');
+    setSaved('');
+    setBusy(true);
     try {
       await api.post('/api/animals', {
         corralId: Number(form.corralId),
         movement: form.movement,
-        quantity: Number(form.quantity),
+        quantity: qty,
         note: form.note || null,
       });
-      setForm({ corralId: '', movement: 'ingreso', quantity: '', note: '' });
+      setSaved(`Guardado: ${isOut ? 'salida' : 'ingreso'} de ${qty} ${qty === 1 ? 'animal' : 'animales'} ${isOut ? 'de' : 'a'} ${corral?.name || 'el corral'}.`);
+      setForm({ ...form, quantity: '', note: '' });
+      await reload();
+    } catch (e2) {
+      setErr(e2.message);
       reload();
-    } catch (e) {
-      setErr(e.message);
+    } finally {
+      setBusy(false);
     }
   }
 
   return (
-    <div className="grid md:grid-cols-3 gap-5">
-      <Card title="Ingreso / Salida de animales">
-        <form onSubmit={submit} className="space-y-2">
-          <select
-            className="w-full border rounded px-2 py-1.5 text-sm"
-            value={form.corralId}
-            onChange={(e) => setForm({ ...form, corralId: e.target.value })}
-            required
-          >
-            <option value="">-- Corral --</option>
-            {corrales.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-          <select
-            className="w-full border rounded px-2 py-1.5 text-sm"
-            value={form.movement}
-            onChange={(e) => setForm({ ...form, movement: e.target.value })}
-          >
-            <option value="ingreso">Ingreso (+)</option>
-            <option value="salida">Salida (−)</option>
-          </select>
-          <input
-            className="w-full border rounded px-2 py-1.5 text-sm"
-            type="number"
-            min="1"
-            placeholder="Cantidad"
-            value={form.quantity}
-            onChange={(e) => setForm({ ...form, quantity: e.target.value })}
-            required
-          />
-          <input
-            className="w-full border rounded px-2 py-1.5 text-sm"
-            placeholder="Nota (opcional)"
-            value={form.note}
-            onChange={(e) => setForm({ ...form, note: e.target.value })}
-          />
-          {err && <div className="text-red-600 text-sm">{err}</div>}
-          <button className="w-full bg-farm-green text-white py-2 rounded text-sm">Guardar</button>
-        </form>
-      </Card>
+    <div className="space-y-5">
+      <div>
+        <h1 className="font-display font-bold text-[30px] leading-tight">Animales</h1>
+        <p className="text-ink-soft">Registra los animales que entran y salen de cada corral.</p>
+      </div>
 
-      <div className="md:col-span-2">
-        <Card title="Movimientos recientes">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="text-left text-xs text-farm-dark/70">
-                <tr>
-                  <th className="py-1">Fecha</th>
-                  <th>Corral</th>
-                  <th>Movimiento</th>
-                  <th>Cantidad</th>
-                  <th>Por</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((r) => (
-                  <tr key={r.id} className="border-t border-farm-sand/40">
-                    <td className="py-1">{r.movementAt}</td>
-                    <td>{r.corralName}</td>
-                    <td className={r.movement === 'ingreso' ? 'text-farm-green' : 'text-red-700'}>
-                      {r.movement}
-                    </td>
-                    <td>{r.quantity}</td>
-                    <td className="text-xs text-farm-dark/70">{r.createdBy}</td>
-                    <td className="text-right">
-                      <ConfirmDelete table="animal_movements" id={r.id} onDeleted={reload} />
-                    </td>
-                  </tr>
+      <div className="grid lg:grid-cols-3 gap-5">
+        <Panel title="Ingreso o salida" subtitle="Actualiza los animales del corral">
+          <form onSubmit={submit} className="space-y-3">
+            <label className="block text-sm">
+              <span className="text-ink-soft">Corral</span>
+              <select className={field} value={form.corralId} onChange={(e) => setForm({ ...form, corralId: e.target.value })} required>
+                <option value="">Elige un corral</option>
+                {corrales.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                    {avail ? ` (${num(avail.animals[c.id] ?? 0)})` : ''}
+                  </option>
                 ))}
-                {rows.length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="py-4 text-center text-farm-dark/50">
-                      Sin movimientos.
-                    </td>
-                  </tr>
+              </select>
+            </label>
+
+            <label className="block text-sm">
+              <span className="text-ink-soft">Movimiento</span>
+              <select className={field} value={form.movement} onChange={(e) => setForm({ ...form, movement: e.target.value })}>
+                <option value="ingreso">Ingreso (entran animales)</option>
+                <option value="salida">Salida (salen animales)</option>
+              </select>
+            </label>
+
+            {here !== null && (
+              <div
+                className={`rounded-xl px-3 py-2.5 text-sm ${nothingToRemove || over ? 'bg-alert-bg text-alert' : 'bg-field text-ink-soft'}`}
+                aria-live="polite"
+              >
+                {nothingToRemove ? (
+                  <><b>{corral?.name} no tiene animales</b> para sacar.</>
+                ) : over ? (
+                  <><b>Solo hay {num(here)} {here === 1 ? 'animal' : 'animales'}</b> en {corral?.name}.</>
+                ) : (
+                  <>
+                    En {corral?.name}: <b className="text-ink">{num(here)} {here === 1 ? 'animal' : 'animales'}</b>
+                    {qty > 0 && <span> · quedarían {num(isOut ? here - qty : here + qty)}</span>}
+                  </>
                 )}
-              </tbody>
-            </table>
-          </div>
-        </Card>
+              </div>
+            )}
+
+            <label className="block text-sm">
+              <span className="text-ink-soft">Cantidad de animales</span>
+              <input
+                className={field}
+                type="number"
+                min="1"
+                step="1"
+                max={isOut && here > 0 ? here : undefined}
+                inputMode="numeric"
+                value={form.quantity}
+                onChange={(e) => setForm({ ...form, quantity: e.target.value })}
+                required
+              />
+            </label>
+            <label className="block text-sm">
+              <span className="text-ink-soft">Nota (opcional)</span>
+              <input className={field} placeholder="Venta, traslado, compra…" value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} />
+            </label>
+
+            {err && <p className="text-sm text-alert" role="alert">{err}</p>}
+            {saved && <p className="text-sm text-farm-green font-medium" role="status">{saved}</p>}
+            <button disabled={!canSave} className="w-full bg-farm-green text-white py-2.5 rounded-lg text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed">
+              {busy ? 'Guardando…' : 'Guardar movimiento'}
+            </button>
+          </form>
+        </Panel>
+
+        <Panel className="lg:col-span-2" title="Movimientos recientes" subtitle="Los más recientes primero">
+          {!rows ? (
+            <Skeleton className="h-48" />
+          ) : rows.length === 0 ? (
+            <p className="text-sm text-ink-soft py-8 text-center">Aún no hay movimientos. Registra el primer ingreso de animales con el formulario.</p>
+          ) : (
+            <div className="overflow-x-auto rounded-xl border border-line">
+              <table className="w-full text-sm min-w-[520px]">
+                <thead className="bg-field text-left text-ink-soft">
+                  <tr>
+                    <th className="px-3 py-2 font-medium">Fecha</th>
+                    <th className="px-3 py-2 font-medium">Corral</th>
+                    <th className="px-3 py-2 font-medium">Movimiento</th>
+                    <th className="px-3 py-2 font-medium text-right">Animales</th>
+                    <th className="px-3 py-2 font-medium">Nota</th>
+                    <th className="px-3 py-2 font-medium">Registró</th>
+                    <th />
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((r) => (
+                    <tr key={r.id} className="border-t border-line">
+                      <td className="px-3 py-2 whitespace-nowrap">{shortDay(r.movementAt)}</td>
+                      <td className="px-3 py-2 whitespace-nowrap">{r.corralName}</td>
+                      <td className="px-3 py-2">{r.movement === 'ingreso' ? 'Ingreso' : 'Salida'}</td>
+                      <td className="px-3 py-2 text-right font-semibold">{r.movement === 'ingreso' ? '+' : '−'}{r.quantity}</td>
+                      <td className="px-3 py-2 text-ink-soft">{r.note || '—'}</td>
+                      <td className="px-3 py-2 text-ink-soft">{r.createdBy || '—'}</td>
+                      <td className="px-3 py-2 text-right">
+                        <ConfirmDelete table="animal_movements" id={r.id} onDeleted={reload} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Panel>
       </div>
     </div>
   );
