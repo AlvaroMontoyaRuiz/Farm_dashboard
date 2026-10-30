@@ -22,9 +22,12 @@ export default function LotesPanel({ lotes, sinLote, corrales, isAdmin, onChange
       }
       action={
         isAdmin && (
-          <button type="button" onClick={() => setEditing((v) => !v)} aria-expanded={editing} className="btn btn-quiet">
-            {editing ? 'Cerrar' : 'Organizar lotes'}
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <Link to="/camadas" className="btn btn-quiet">Historial de camadas</Link>
+            <button type="button" onClick={() => setEditing((v) => !v)} aria-expanded={editing} className="btn btn-quiet">
+              {editing ? 'Cerrar' : 'Organizar lotes'}
+            </button>
+          </div>
         )
       }
     >
@@ -46,6 +49,29 @@ export default function LotesPanel({ lotes, sinLote, corrales, isAdmin, onChange
   );
 }
 
+// Mortality of the batch in progress: deaths ÷ animals that entered. See "Camadas" for the history.
+function Mortality({ batch, last }) {
+  if (batch) {
+    return (
+      <p className="mt-2 text-sm" title="Muertes ÷ animales que ingresaron en esta camada">
+        <span className="text-ink-soft">Mortalidad </span>
+        <b className="text-ink">{num(batch.mortality)} %</b>
+        <span className="text-ink-soft">
+          {' '}· {num(batch.deaths)} de {num(batch.entered)} · día {batch.days}
+        </span>
+      </p>
+    );
+  }
+  if (last) {
+    return (
+      <p className="mt-2 text-sm text-ink-soft" title="Muertes ÷ animales que ingresaron en esa camada">
+        Última camada: <b className="text-ink">{num(last.mortality)} %</b> · {num(last.deaths)} de {num(last.entered)}
+      </p>
+    );
+  }
+  return <p className="mt-2 text-sm text-ink-faint">Sin camadas todavía</p>;
+}
+
 function LoteCard({ lote, loose = false }) {
   const pending = lote.activeCorrales - lote.fedCorrales;
   return (
@@ -61,6 +87,8 @@ function LoteCard({ lote, loose = false }) {
         <span className="font-display font-bold text-[38px] leading-none">{num(lote.animals)}</span>
         <span className="text-sm text-ink-soft">{lote.animals === 1 ? 'animal' : 'animales'}</span>
       </div>
+
+      {!loose && <Mortality batch={lote.batch} last={lote.lastBatch} />}
 
       {lote.corrales.length === 0 ? (
         <p className="text-sm text-ink-faint mt-3">Sin corrales</p>

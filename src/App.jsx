@@ -9,6 +9,7 @@ import Animales from './pages/Animales.jsx';
 import Inventario from './pages/Inventario.jsx';
 import DailyLog from './pages/DailyLog.jsx';
 import DeletionLog from './pages/DeletionLog.jsx';
+import Camadas from './pages/Camadas.jsx';
 
 export default function App() {
   const [user, setUser] = useState(undefined); // undefined=loading, null=anon
@@ -66,6 +67,7 @@ export default function App() {
             {user.role === 'admin' && (
               <>
                 <NavItem to="/inventario">Bultos</NavItem>
+                <NavItem to="/camadas">Camadas</NavItem>
                 <NavItem to="/diario">Historial diario</NavItem>
                 <NavItem to="/eliminados">Historial eliminados</NavItem>
               </>
@@ -81,6 +83,7 @@ export default function App() {
           <Route path="/animales" element={<Animales user={user} />} />
           {/* Workers only get the Panel, Consumo and Animales. */}
           <Route path="/inventario" element={user.role === 'admin' ? <Inventario user={user} /> : <Navigate to="/" />} />
+          <Route path="/camadas" element={user.role === 'admin' ? <Camadas /> : <Navigate to="/" />} />
           <Route path="/diario" element={user.role === 'admin' ? <DailyLog /> : <Navigate to="/" />} />
           <Route
             path="/eliminados"

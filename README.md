@@ -200,6 +200,14 @@ The app never lets the inventory go below zero:
 - **Feed types**: Levante, **Engorde** and Finalizador (40 kg per bulto each by default; change it in Bultos → Tipos de bulto). To add another type, add it in `functions/_lib/foods.js`, `src/lib/format.js` and the `TYPES_SQL` list in `functions/_lib/migrate.js`.
 - **Prices** (Bultos, admin only): every delivery (*Ingresos*) is saved with the price of ONE bulto **without IVA**. The IVA (5 %, `IVA_RATE` in `functions/_lib/foods.js`) and the totals are calculated, never stored. Each delivery keeps its own price, so a later refill at a different price does not change the earlier ones. *Bultos → Resumen → Costo de los bultos* shows, per type, the last price, the average price (weighted by bultos), cost per kg, and the totals without IVA, IVA and with IVA. A wrong price is corrected with **Corregir** (no need to delete the delivery).
 
+## Mortality and batches (camadas)
+
+- A **camada** (batch) is the group of animals that goes through a lote together. It **starts** when animals enter a lote that is empty, more entries while animals are still there join the same camada, and it **ends** when the lote is empty again (everything sold or dead). 150 enter and 5 die = one camada with **3,3 %** mortality (deaths ÷ animals that entered).
+- Animals in the infirmary stay part of their camada, so sending the healthy ones to be sold does not close it early.
+- **Panel → Lotes:** each lote card shows the mortality of the camada in progress (deaths of entered, day number) or, if the lote is empty, of the last finished one.
+- **Camadas** (admin menu): mortality per lote over all its history, plus the history of every camada (start, end, days, entered, deaths, sold, mortality).
+- Nothing is stored: it is calculated from the animal movements, so deleting or correcting a record fixes the numbers. It uses the corrales each lote has today; moving a corral to another lote recalculates the history of both lotes.
+
 ## Updating an existing database
 
 **The app updates its own database.** The first time anyone uses the site after a new version is deployed, it checks the database and adds whatever is missing (weights, movement types, Engorde, prices, lotes), keeping every record. There is nothing to run.

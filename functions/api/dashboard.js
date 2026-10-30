@@ -10,6 +10,7 @@
 import { requireUser, json } from '../_lib/auth.js';
 import { todayStr, addDays, lastDays, avgWindow } from '../_lib/time.js';
 import { FOOD_TYPES as TYPES, zeroByType } from '../_lib/foods.js';
+import { loadBatches } from '../_lib/batches.js';
 const r2 = (n) => Math.round(Number(n || 0) * 100) / 100;
 
 export const onRequestGet = async ({ request, env }) => {
@@ -25,7 +26,7 @@ export const onRequestGet = async ({ request, env }) => {
   const firstRow = await env.DB.prepare(`SELECT MIN(consumed_at) AS d FROM feed_consumption`).first();
   const win = avgWindow(firstRow && firstRow.d, today);
 
-  const [lots, consumedAll, daily, animals, perCorral, activity, lotesRes] = await Promise.all([
+  const [lots, consumedAll, daily, animals, perCorral, activity, lotesRes, batchesByLote] = await Promise.all([
     env.DB.prepare(`SELECT type, COALESCE(SUM(bultos_received),0) AS n FROM food_lots GROUP BY type`).all(),
     env.DB.prepare(`SELECT food_type AS type, COALESCE(SUM(bultos),0) AS n FROM feed_consumption GROUP BY food_type`).all(),
     env.DB.prepare(
@@ -65,6 +66,7 @@ export const onRequestGet = async ({ request, env }) => {
        ) ORDER BY ts DESC LIMIT 12`
     ).all(),
     env.DB.prepare(`SELECT id, name FROM lotes ORDER BY id`).all(),
+    loadBatches(env, today),
   ]);
 
   // ---- trend (30 days, missing days filled with zero)
@@ -122,6 +124,8 @@ export const onRequestGet = async ({ request, env }) => {
 
   // ---- lotes: groups of corrales (lote_id on each corral). Corrales without a lote go to "Sin lote".
   const mkLote = (id, name) => {
+    const bs = id == null ? [] : batchesByLote.get(id) || [];
+    const closed = bs.filter((b) => !b.open);
     const mine = corrales.filter((c) => c.loteId === id);
     const withAnimals = mine.filter((c) => c.animals > 0);
     return {
@@ -132,6 +136,9 @@ export const onRequestGet = async ({ request, env }) => {
       activeCorrales: withAnimals.length,
       fedCorrales: withAnimals.filter((c) => c.fedToday).length,
       todayBultos: r2(mine.reduce((s, c) => s + c.todayBultos, 0)),
+      // mortality of the batch in progress (null when the lote is empty) and of the last finished one
+      batch: bs.find((b) => b.open) || null,
+      lastBatch: closed.length ? closed[closed.length - 1] : null,
     };
   };
   const lotes = (lotesRes.results || []).map((l) => mkLote(Number(l.id), l.name));
