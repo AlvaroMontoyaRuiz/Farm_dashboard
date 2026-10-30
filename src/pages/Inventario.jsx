@@ -5,7 +5,7 @@ import { Panel, Segmented, Skeleton, IconAlert } from '../components/ui.jsx';
 import StockCard from '../components/StockCard.jsx';
 import StockChart from '../components/StockChart.jsx';
 import ConfirmDelete from '../components/ConfirmDelete.jsx';
-import { num2, signed, shortDay, whenLabel, localToday, TYPE_LABEL, TYPE_COLOR } from '../lib/format.js';
+import { num2, signed, shortDay, whenLabel, localToday, cop, FOOD_TYPES, IVA_PCT, TYPE_LABEL, TYPE_COLOR } from '../lib/format.js';
 
 const TABS = [
   { id: 'resumen', label: 'Resumen' },
@@ -42,7 +42,7 @@ export default function Inventario({ user }) {
     load();
   }, [load]);
 
-  const negative = inv && ['levante', 'finalizador'].filter((t) => inv.summary[t].wentNegative);
+  const negative = inv && FOOD_TYPES.filter((t) => inv.summary[t].wentNegative);
 
   return (
     <div className="space-y-5">
@@ -84,10 +84,13 @@ export default function Inventario({ user }) {
               </div>
             )}
 
-            <div className="grid md:grid-cols-2 gap-5">
-              <StockCard type="levante" data={inv.summary.levante} detailed />
-              <StockCard type="finalizador" data={inv.summary.finalizador} detailed />
+            <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-5">
+              {FOOD_TYPES.map((t) => (
+                <StockCard key={t} type={t} data={inv.summary[t]} detailed />
+              ))}
             </div>
+
+            <Costos costs={inv.costs} onGoIngresos={() => setTab('ingresos')} />
 
             <Panel
               title="Nivel de stock"
@@ -132,8 +135,9 @@ function Movimientos({ inv, filters, setFilters }) {
           <span className="label">Alimento</span>
           <select className={field} value={filters.type} onChange={set('type')}>
             <option value="">Todos</option>
-            <option value="levante">Levante</option>
-            <option value="finalizador">Finalizador</option>
+            {FOOD_TYPES.map((t) => (
+              <option key={t} value={t}>{TYPE_LABEL[t]}</option>
+            ))}
           </select>
         </label>
         <label className="text-sm">
@@ -254,7 +258,7 @@ function TiposBulto() {
       {!types ? (
         <Skeleton className="h-48" />
       ) : (
-        <div className="grid md:grid-cols-2 gap-5">
+        <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-5">
           {types.map((t) => (
             <TipoCard key={t.type} t={t} onSaved={load} />
           ))}
@@ -317,9 +321,94 @@ function TipoCard({ t, onSaved }) {
   );
 }
 
+/* ---------------- Costos (what the bultos cost) ---------------- */
+
+// Prices are saved WITHOUT IVA; the IVA and the totals are calculated from them.
+function Costos({ costs, onGoIngresos }) {
+  const rows = FOOD_TYPES.map((t) => ({ t, ...costs.byType[t] }));
+  const none = costs.total.net === 0;
+  const pct = Math.round(costs.ivaRate * 100);
+
+  return (
+    <Panel title="Costo de los bultos" subtitle={`Precios sin IVA; el IVA (${pct} %) se calcula aparte`}>
+      {none ? (
+        <p className="text-sm text-ink-soft py-4">
+          Aún no hay precios registrados. Al registrar un ingreso de bultos escribe cuánto cuesta un bulto, sin IVA.
+        </p>
+      ) : (
+        <div className="rtable-wrap overflow-x-auto rounded-xl border border-line">
+          <table className="rtable w-full text-[15px]">
+            <thead className="bg-field text-left text-ink-soft">
+              <tr>
+                <th className="px-3 py-2 font-medium">Alimento</th>
+                <th className="px-3 py-2 font-medium text-right">Bultos comprados</th>
+                <th className="px-3 py-2 font-medium text-right">Último precio</th>
+                <th className="px-3 py-2 font-medium text-right">Precio promedio</th>
+                <th className="px-3 py-2 font-medium text-right">Total sin IVA</th>
+                <th className="px-3 py-2 font-medium text-right">IVA {pct} %</th>
+                <th className="px-3 py-2 font-medium text-right">Total con IVA</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r.t} className="border-t border-line align-top">
+                  <td data-label="Alimento" className="px-3 py-2 whitespace-nowrap">
+                    <span>
+                      <span className="inline-block w-2.5 h-2.5 rounded-full mr-1.5" style={{ background: TYPE_COLOR[r.t] }} aria-hidden />
+                      {TYPE_LABEL[r.t]}
+                    </span>
+                  </td>
+                  <td data-label="Bultos comprados" className="px-3 py-2 text-right">{num2(r.bultos)}</td>
+                  <td data-label="Último precio" className="px-3 py-2 text-right whitespace-nowrap">
+                    <div className="text-right">
+                      {r.lastPrice ? cop(r.lastPrice.net) : '—'}
+                      {r.lastPrice && <div className="text-xs text-ink-faint">{shortDay(r.lastPrice.date)}</div>}
+                    </div>
+                  </td>
+                  <td data-label="Precio promedio" className="px-3 py-2 text-right whitespace-nowrap">
+                    <div className="text-right">
+                      {r.avgNet != null ? cop(r.avgNet) : '—'}
+                      {r.avgNetPerKg != null && <div className="text-xs text-ink-faint">{cop(r.avgNetPerKg)} por kg</div>}
+                    </div>
+                  </td>
+                  <td data-label="Total sin IVA" className="px-3 py-2 text-right whitespace-nowrap">{cop(r.totalNet)}</td>
+                  <td data-label={`IVA ${pct} %`} className="px-3 py-2 text-right whitespace-nowrap">{cop(r.totalIva)}</td>
+                  <td data-label="Total con IVA" className="px-3 py-2 text-right font-semibold whitespace-nowrap">{cop(r.totalGross)}</td>
+                </tr>
+              ))}
+              <tr className="border-t-2 border-line bg-field/60 font-semibold">
+                <td data-label="Alimento" className="px-3 py-2">Total</td>
+                <td data-label="Bultos comprados" className="px-3 py-2 text-right">{num2(costs.total.bultos)}</td>
+                <td className="px-3 py-2 hidden md:table-cell" />
+                <td className="px-3 py-2 hidden md:table-cell" />
+                <td data-label="Total sin IVA" className="px-3 py-2 text-right whitespace-nowrap">{cop(costs.total.net)}</td>
+                <td data-label={`IVA ${pct} %`} className="px-3 py-2 text-right whitespace-nowrap">{cop(costs.total.iva)}</td>
+                <td data-label="Total con IVA" className="px-3 py-2 text-right whitespace-nowrap">{cop(costs.total.gross)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      )}
+      {costs.total.lotsWithoutPrice > 0 && (
+        <p className="text-sm text-ink-soft mt-3">
+          {costs.total.lotsWithoutPrice} {costs.total.lotsWithoutPrice === 1 ? 'ingreso no tiene' : 'ingresos no tienen'} precio y no {costs.total.lotsWithoutPrice === 1 ? 'cuenta' : 'cuentan'} aquí.{' '}
+          <button type="button" onClick={onGoIngresos} className="font-semibold text-farm-green underline underline-offset-2">
+            Agregar los precios
+          </button>
+        </p>
+      )}
+      <p className="text-xs text-ink-faint mt-2">
+        El precio promedio pesa cada compra por sus bultos: 10 bultos a $45.000 y 10 a $47.000 dan un promedio de $46.000.
+      </p>
+    </Panel>
+  );
+}
+
+/* ---------------- Ingresos (register + list) ---------------- */
+
 function Ingresos({ isAdmin, onChanged }) {
   const [rows, setRows] = useState(null);
-  const [form, setForm] = useState({ type: 'levante', bultosReceived: '', receivedAt: localToday(), note: '' });
+  const [form, setForm] = useState({ type: 'levante', bultosReceived: '', pricePerBulto: '', receivedAt: localToday(), note: '' });
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState('');
@@ -337,6 +426,12 @@ function Ingresos({ isAdmin, onChanged }) {
     onChanged();
   };
 
+  // What this purchase costs, shown before saving
+  const qty = Number(form.bultosReceived) || 0;
+  const price = Number(form.pricePerBulto) || 0;
+  const net = qty * price;
+  const iva = net * (IVA_PCT / 100);
+
   async function submit(e) {
     e.preventDefault();
     setErr('');
@@ -346,11 +441,12 @@ function Ingresos({ isAdmin, onChanged }) {
       await api.post('/api/food-lots', {
         type: form.type,
         bultosReceived: Number(form.bultosReceived),
+        pricePerBulto: Number(form.pricePerBulto),
         receivedAt: form.receivedAt || null,
         note: form.note || null,
       });
-      setSaved(`Ingreso guardado: ${form.bultosReceived} bultos de ${TYPE_LABEL[form.type].toLowerCase()}.`);
-      setForm({ ...form, bultosReceived: '', note: '' });
+      setSaved(`Ingreso guardado: ${form.bultosReceived} bultos de ${TYPE_LABEL[form.type].toLowerCase()} a ${cop(price)} cada uno (sin IVA).`);
+      setForm({ ...form, bultosReceived: '', pricePerBulto: '', note: '' });
       afterChange();
     } catch (e2) {
       setErr(e2.message);
@@ -367,8 +463,9 @@ function Ingresos({ isAdmin, onChanged }) {
             <label className="block text-sm">
               <span className="label">Alimento</span>
               <select className={field} value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
-                <option value="levante">Levante</option>
-                <option value="finalizador">Finalizador</option>
+                {FOOD_TYPES.map((t) => (
+                  <option key={t} value={t}>{TYPE_LABEL[t]}</option>
+                ))}
               </select>
             </label>
             <label className="block text-sm">
@@ -384,6 +481,38 @@ function Ingresos({ isAdmin, onChanged }) {
                 required
               />
             </label>
+            <label className="block text-sm">
+              <span className="label">Precio de un bulto, sin IVA (COP)</span>
+              <input
+                className={field}
+                type="number"
+                min="1"
+                step="any"
+                inputMode="decimal"
+                placeholder="Ej: 45000"
+                value={form.pricePerBulto}
+                onChange={(e) => setForm({ ...form, pricePerBulto: e.target.value })}
+                required
+              />
+            </label>
+
+            {/* The IVA is calculated, never typed */}
+            <div className="rounded-xl bg-field px-3 py-2.5 text-sm text-ink-soft" aria-live="polite">
+              {qty > 0 && price > 0 ? (
+                <dl className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-0.5">
+                  <dt>Subtotal sin IVA</dt>
+                  <dd className="text-right text-ink">{cop(net)}</dd>
+                  <dt>IVA {IVA_PCT} %</dt>
+                  <dd className="text-right text-ink">{cop(iva)}</dd>
+                  <dt className="font-semibold text-ink">Total con IVA</dt>
+                  <dd className="text-right font-semibold text-ink">{cop(net + iva)}</dd>
+                  <dt className="text-xs text-ink-faint col-span-2 pt-1">Cada bulto con IVA: {cop(price * (1 + IVA_PCT / 100))}</dt>
+                </dl>
+              ) : (
+                <>Escribe los bultos y el precio para ver el IVA ({IVA_PCT} %) y el total.</>
+              )}
+            </div>
+
             <label className="block text-sm">
               <span className="label">Fecha de llegada</span>
               <input
@@ -427,6 +556,8 @@ function Ingresos({ isAdmin, onChanged }) {
                   <th className="px-3 py-2 font-medium">Fecha</th>
                   <th className="px-3 py-2 font-medium">Alimento</th>
                   <th className="px-3 py-2 font-medium text-right">Bultos</th>
+                  <th className="px-3 py-2 font-medium text-right">Precio por bulto</th>
+                  <th className="px-3 py-2 font-medium text-right">Total de la compra</th>
                   <th className="px-3 py-2 font-medium">Nota</th>
                   <th className="px-3 py-2 font-medium">Registró</th>
                   {isAdmin && <th />}
@@ -434,14 +565,28 @@ function Ingresos({ isAdmin, onChanged }) {
               </thead>
               <tbody>
                 {rows.map((r) => (
-                  <tr key={r.id} className="border-t border-line">
+                  <tr key={r.id} className="border-t border-line align-top">
                     <td data-label="Fecha" className="px-3 py-2 whitespace-nowrap">{shortDay(r.receivedAt)}</td>
                     <td data-label="Alimento" className="px-3 py-2 whitespace-nowrap">
-<span>
-                      <span className="inline-block w-2.5 h-2.5 rounded-full mr-1.5" style={{ background: TYPE_COLOR[r.type] }} aria-hidden />
-                      {TYPE_LABEL[r.type]}</span>
+                      <span>
+                        <span className="inline-block w-2.5 h-2.5 rounded-full mr-1.5" style={{ background: TYPE_COLOR[r.type] }} aria-hidden />
+                        {TYPE_LABEL[r.type]}
+                      </span>
                     </td>
                     <td data-label="Bultos" className="px-3 py-2 text-right font-semibold">{r.bultosReceived}</td>
+                    <td data-label="Precio por bulto" className="px-3 py-2 text-right whitespace-nowrap">
+                      <PriceCell lot={r} onSaved={afterChange} />
+                    </td>
+                    <td data-label="Total de la compra" className="px-3 py-2 text-right whitespace-nowrap">
+                      {r.cost ? (
+                        <div className="text-right">
+                          <div className="font-semibold">{cop(r.cost.totalGross)}</div>
+                          <div className="text-xs text-ink-faint">sin IVA {cop(r.cost.totalNet)}</div>
+                        </div>
+                      ) : (
+                        '—'
+                      )}
+                    </td>
                     <td data-label="Nota" className="px-3 py-2 text-ink-soft">{r.note || '—'}</td>
                     <td data-label="Registró" className="px-3 py-2 text-ink-soft">{r.createdBy || '—'}</td>
                     {isAdmin && (
@@ -455,7 +600,80 @@ function Ingresos({ isAdmin, onChanged }) {
             </table>
           </div>
         )}
+        <p className="text-xs text-ink-faint mt-3">
+          El precio se guarda sin IVA. Si te equivocaste en un precio, toca “Corregir”: no hace falta borrar el ingreso.
+        </p>
       </Panel>
+    </div>
+  );
+}
+
+// Price of one bulto (without IVA), with the IVA price underneath and a way to correct it.
+function PriceCell({ lot, onSaved }) {
+  const [open, setOpen] = useState(false);
+  const [val, setVal] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+
+  async function save(e) {
+    e.preventDefault();
+    setBusy(true);
+    setErr('');
+    try {
+      await api.post(`/api/food-lots/${lot.id}`, { pricePerBulto: Number(val) });
+      setOpen(false);
+      onSaved();
+    } catch (e2) {
+      setErr(e2.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (open) {
+    return (
+      <form onSubmit={save} className="flex flex-col gap-1.5 items-end">
+        <input
+          className="field !w-36 text-right"
+          type="number"
+          min="1"
+          step="any"
+          inputMode="decimal"
+          autoFocus
+          value={val}
+          onChange={(e) => setVal(e.target.value)}
+          aria-label="Precio de un bulto, sin IVA"
+          placeholder="Sin IVA"
+          required
+        />
+        <div className="flex gap-1.5">
+          <button className="btn btn-primary !min-h-[36px] px-3" disabled={busy || !(Number(val) > 0)}>Guardar</button>
+          <button type="button" className="btn btn-quiet !min-h-[36px] px-3" onClick={() => setOpen(false)}>Cancelar</button>
+        </div>
+        {err && <span className="text-xs text-alert whitespace-normal">{err}</span>}
+      </form>
+    );
+  }
+  return (
+    <div className="text-right">
+      {lot.cost ? (
+        <>
+          <div>{cop(lot.cost.priceNet)}</div>
+          <div className="text-xs text-ink-faint">con IVA {cop(lot.cost.priceGross)}</div>
+        </>
+      ) : (
+        <span className="text-ink-faint">Sin precio</span>
+      )}
+      <button
+        type="button"
+        onClick={() => {
+          setVal(lot.pricePerBulto != null ? String(lot.pricePerBulto) : '');
+          setOpen(true);
+        }}
+        className="text-xs font-semibold text-farm-green underline underline-offset-2 block ml-auto mt-0.5"
+      >
+        {lot.cost ? 'Corregir' : 'Agregar precio'}
+      </button>
     </div>
   );
 }

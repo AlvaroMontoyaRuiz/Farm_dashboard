@@ -5,6 +5,7 @@
 // here only affects feedings registered from now on.
 
 import { requireUser, requireAdmin, json } from '../_lib/auth.js';
+import { FOOD_TYPES, isFoodType } from '../_lib/foods.js';
 
 export const onRequestGet = async ({ request, env }) => {
   try {
@@ -13,9 +14,10 @@ export const onRequestGet = async ({ request, env }) => {
     return r;
   }
   const rows = await env.DB.prepare(
-    `SELECT type, kg_per_bulto AS kgPerBulto, description, updated_at AS updatedAt FROM food_types ORDER BY type`
+    `SELECT type, kg_per_bulto AS kgPerBulto, description, updated_at AS updatedAt FROM food_types `
   ).all();
-  return json({ types: rows.results || [] });
+  const order = (t) => FOOD_TYPES.indexOf(t.type);
+  return json({ types: (rows.results || []).sort((a, b) => order(a) - order(b)) });
 };
 
 export const onRequestPost = async ({ request, env }) => {
@@ -25,7 +27,7 @@ export const onRequestPost = async ({ request, env }) => {
     return r;
   }
   const { type, kgPerBulto, description } = (await request.json().catch(() => ({}))) || {};
-  if (!['levante', 'finalizador'].includes(type)) return json({ error: 'bad_type' }, 400);
+  if (!isFoodType(type)) return json({ error: 'bad_type' }, 400);
   const kg = Number(kgPerBulto);
   if (!Number.isFinite(kg) || kg <= 0 || kg > 200) return json({ error: 'bad_kg_per_bulto' }, 400);
   await env.DB.prepare(

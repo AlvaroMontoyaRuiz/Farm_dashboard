@@ -2,13 +2,15 @@
 // mistakes into clear JSON error codes instead of an opaque HTTP 500:
 //   - db_binding_missing : the D1 binding named "DB" is not attached
 //   - db_not_initialized : the database exists but the migrations were not run
-//   - db_needs_update    : the code is newer than the database (migration 0003 or 0004 missing)
+//   - db_needs_update    : the code is newer than the database (the automatic update could not run)
 
 import { json } from '../_lib/auth.js';
+import { ensureSchema } from '../_lib/migrate.js';
 
 export const onRequest = async ({ env, next }) => {
   if (!env.DB) return json({ error: 'db_binding_missing' }, 500);
   try {
+    await ensureSchema(env); // brings an older database up to date, once per server instance
     return await next();
   } catch (e) {
     if (e instanceof Response) return e;

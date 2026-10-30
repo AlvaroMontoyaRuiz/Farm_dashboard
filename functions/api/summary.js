@@ -5,6 +5,7 @@
 //   - today's total consumption
 
 import { requireUser, json } from '../_lib/auth.js';
+import { zeroByType, FOOD_TYPES } from '../_lib/foods.js';
 
 export const onRequestGet = async ({ request, env }) => {
   try {
@@ -21,14 +22,11 @@ export const onRequestGet = async ({ request, env }) => {
     `SELECT food_type AS type, COALESCE(SUM(bultos), 0) AS c FROM feed_consumption GROUP BY food_type`
   ).all();
 
-  const received = { levante: 0, finalizador: 0 };
+  const received = zeroByType();
   for (const r of receivedRows.results || []) received[r.type] = r.r;
-  const consumed = { levante: 0, finalizador: 0 };
+  const consumed = zeroByType();
   for (const r of consumedRows.results || []) consumed[r.type] = r.c;
-  const remaining = {
-    levante: +(received.levante - consumed.levante).toFixed(2),
-    finalizador: +(received.finalizador - consumed.finalizador).toFixed(2),
-  };
+  const remaining = Object.fromEntries(FOOD_TYPES.map((t) => [t, +(received[t] - consumed[t]).toFixed(2)]));
 
   // animals per corral = sum(ingreso) - sum(salida)
   const headcount = await env.DB.prepare(
@@ -47,7 +45,7 @@ export const onRequestGet = async ({ request, env }) => {
     `SELECT food_type, COALESCE(SUM(bultos), 0) AS b
        FROM feed_consumption WHERE consumed_at = date('now','-5 hours') GROUP BY food_type`
   ).all();
-  const todayCons = { levante: 0, finalizador: 0 };
+  const todayCons = zeroByType();
   for (const r of today.results || []) todayCons[r.food_type] = r.b;
 
   return json({

@@ -9,8 +9,16 @@ export const signed = (n) => (n > 0 ? '+' : n < 0 ? '−' : '') + nf2.format(Mat
 
 export const bultosWord = (n) => (Math.abs(Number(n)) === 1 ? 'bulto' : 'bultos');
 
-export const TYPE_LABEL = { levante: 'Levante', finalizador: 'Finalizador' };
-export const TYPE_COLOR = { levante: '#1F7A4D', finalizador: '#D98A00' };
+// Feed types, in the order the animals go through them.
+export const FOOD_TYPES = ['levante', 'engorde', 'finalizador'];
+export const TYPE_LABEL = { levante: 'Levante', engorde: 'Engorde', finalizador: 'Finalizador' };
+export const TYPE_COLOR = { levante: '#1F7A4D', engorde: '#3B6FB6', finalizador: '#D98A00' };
+export const sumTypes = (row) => FOOD_TYPES.reduce((s, t) => s + Number(row?.[t] || 0), 0);
+
+// Money (Colombian pesos, no cents)
+const nfCop = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
+export const cop = (n) => (n == null ? '—' : nfCop.format(Math.round(Number(n))));
+export const IVA_PCT = 5;
 
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 

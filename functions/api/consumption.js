@@ -7,6 +7,7 @@
 
 import { requireUser, json } from '../_lib/auth.js';
 import { TODAY_SQL, todayStr } from '../_lib/time.js';
+import { isFoodType } from '../_lib/foods.js';
 import { feedRemaining, loadFeedEvents, feedKey, newNegative, isDate, nowTs } from '../_lib/stock.js';
 
 export const onRequestGet = async ({ request, env }) => {
@@ -57,7 +58,7 @@ export const onRequestPost = async ({ request, env }) => {
   const { corralId, foodType, bultos, consumedAt, note } =
     (await request.json().catch(() => ({}))) || {};
   if (!corralId) return json({ error: 'corral_required' }, 400);
-  if (!['levante', 'finalizador'].includes(foodType)) return json({ error: 'bad_food_type' }, 400);
+  if (!isFoodType(foodType)) return json({ error: 'bad_food_type' }, 400);
   const b = Number(bultos);
   if (!Number.isFinite(b) || b <= 0) return json({ error: 'bad_bultos' }, 400);
   const today = todayStr();

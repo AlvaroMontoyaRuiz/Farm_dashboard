@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { api } from '../lib/api.js';
 import { Panel, Skeleton } from '../components/ui.jsx';
 import ConfirmDelete from '../components/ConfirmDelete.jsx';
-import { num, num2, bultosWord, shortDay, TYPE_LABEL, TYPE_COLOR } from '../lib/format.js';
+import { num, num2, bultosWord, shortDay, FOOD_TYPES, TYPE_LABEL, TYPE_COLOR } from '../lib/format.js';
 
 const field = 'field';
 
@@ -13,7 +13,7 @@ export default function Consumo() {
   const [corrales, setCorrales] = useState([]);
   const [rows, setRows] = useState(null);
   const [kgBy, setKgBy] = useState({}); // kg per bulto of each feed type
-  const [avail, setAvail] = useState(null); // { stock: {levante, finalizador}, animals: {id: n} }
+  const [avail, setAvail] = useState(null); // { stock: {levante, engorde, finalizador}, animals: {id: n} }
   const [form, setForm] = useState({ corralId: params.get('corral') || '', foodType: 'levante', bultos: '', note: '' });
   const [err, setErr] = useState('');
   const [saved, setSaved] = useState('');
@@ -92,8 +92,9 @@ export default function Consumo() {
             <label className="block text-sm">
               <span className="label">Alimento</span>
               <select className={field} value={form.foodType} onChange={(e) => setForm({ ...form, foodType: e.target.value })}>
-                <option value="levante">Levante</option>
-                <option value="finalizador">Finalizador</option>
+                {FOOD_TYPES.map((t) => (
+                  <option key={t} value={t}>{TYPE_LABEL[t]}</option>
+                ))}
               </select>
             </label>
 

@@ -4,12 +4,12 @@
 //   - today's consumption vs. the recent daily average
 //   - last 30 days of consumption (stacked by feed type)
 //   - one entry per corral: animals, fed today?, bultos today, 7-day average
+//   - the lotes (groups of corrales) with their animals and today's feeding
 //   - the latest activity across consumption, animal movements and food lots
 
 import { requireUser, json } from '../_lib/auth.js';
 import { todayStr, addDays, lastDays, avgWindow } from '../_lib/time.js';
-
-const TYPES = ['levante', 'finalizador'];
+import { FOOD_TYPES as TYPES, zeroByType } from '../_lib/foods.js';
 const r2 = (n) => Math.round(Number(n || 0) * 100) / 100;
 
 export const onRequestGet = async ({ request, env }) => {
@@ -25,7 +25,7 @@ export const onRequestGet = async ({ request, env }) => {
   const firstRow = await env.DB.prepare(`SELECT MIN(consumed_at) AS d FROM feed_consumption`).first();
   const win = avgWindow(firstRow && firstRow.d, today);
 
-  const [lots, consumedAll, daily, animals, perCorral, activity] = await Promise.all([
+  const [lots, consumedAll, daily, animals, perCorral, activity, lotesRes] = await Promise.all([
     env.DB.prepare(`SELECT type, COALESCE(SUM(bultos_received),0) AS n FROM food_lots GROUP BY type`).all(),
     env.DB.prepare(`SELECT food_type AS type, COALESCE(SUM(bultos),0) AS n FROM feed_consumption GROUP BY food_type`).all(),
     env.DB.prepare(
@@ -35,7 +35,7 @@ export const onRequestGet = async ({ request, env }) => {
       .bind(from30, today)
       .all(),
     env.DB.prepare(
-      `SELECT c.id, c.name,
+      `SELECT c.id, c.name, c.lote_id AS loteId,
               COALESCE(SUM(CASE WHEN m.movement='ingreso' THEN m.quantity ELSE -m.quantity END), 0) AS animals
          FROM corrales c LEFT JOIN animal_movements m ON m.corral_id = c.id
         GROUP BY c.id ORDER BY c.id`
@@ -64,23 +64,23 @@ export const onRequestGet = async ({ request, env }) => {
            FROM food_lots f LEFT JOIN users u ON u.id = f.created_by
        ) ORDER BY ts DESC LIMIT 12`
     ).all(),
+    env.DB.prepare(`SELECT id, name FROM lotes ORDER BY id`).all(),
   ]);
 
   // ---- trend (30 days, missing days filled with zero)
   const byDay = {};
   for (const row of daily.results || []) {
-    byDay[row.d] = byDay[row.d] || { levante: 0, finalizador: 0 };
+    byDay[row.d] = byDay[row.d] || zeroByType();
     byDay[row.d][row.t] = Number(row.n);
   }
   const trend = lastDays(today, 30).map((date) => ({
     date,
-    levante: r2(byDay[date]?.levante),
-    finalizador: r2(byDay[date]?.finalizador),
+    ...Object.fromEntries(TYPES.map((t) => [t, r2(byDay[date]?.[t])])),
   }));
 
   // ---- stock per type
-  const received = { levante: 0, finalizador: 0 };
-  const consumed = { levante: 0, finalizador: 0 };
+  const received = zeroByType();
+  const consumed = zeroByType();
   for (const x of lots.results || []) received[x.type] = Number(x.n);
   for (const x of consumedAll.results || []) consumed[x.type] = Number(x.n);
 
@@ -100,8 +100,8 @@ export const onRequestGet = async ({ request, env }) => {
 
   // ---- today
   const todayRow = trend[trend.length - 1];
-  const todayTotal = r2(todayRow.levante + todayRow.finalizador);
-  const avgTotal = r2(stock.levante.avgDaily + stock.finalizador.avgDaily);
+  const todayTotal = r2(TYPES.reduce((s, t) => s + todayRow[t], 0));
+  const avgTotal = r2(TYPES.reduce((s, t) => s + stock[t].avgDaily, 0));
 
   // ---- corrales
   const consById = {};
@@ -111,6 +111,7 @@ export const onRequestGet = async ({ request, env }) => {
     return {
       id: c.id,
       name: c.name,
+      loteId: c.loteId == null ? null : Number(c.loteId),
       animals: Number(c.animals),
       todayBultos: r2(k?.today),
       avgDaily: r2((k?.week || 0) / win.days),
@@ -119,16 +120,35 @@ export const onRequestGet = async ({ request, env }) => {
   });
   const active = corrales.filter((c) => c.animals > 0);
 
+  // ---- lotes: groups of corrales (lote_id on each corral). Corrales without a lote go to "Sin lote".
+  const mkLote = (id, name) => {
+    const mine = corrales.filter((c) => c.loteId === id);
+    const withAnimals = mine.filter((c) => c.animals > 0);
+    return {
+      id,
+      name,
+      animals: mine.reduce((s, c) => s + c.animals, 0),
+      corrales: mine.map((c) => ({ id: c.id, name: c.name, animals: c.animals, fedToday: c.fedToday })),
+      activeCorrales: withAnimals.length,
+      fedCorrales: withAnimals.filter((c) => c.fedToday).length,
+      todayBultos: r2(mine.reduce((s, c) => s + c.todayBultos, 0)),
+    };
+  };
+  const lotes = (lotesRes.results || []).map((l) => mkLote(Number(l.id), l.name));
+  const loose = mkLote(null, 'Sin lote');
+
   return json({
     today,
     totalAnimals: corrales.reduce((s, c) => s + c.animals, 0),
     activeCorrales: active.length,
     fedCorrales: active.filter((c) => c.fedToday).length,
-    todayConsumption: { levante: todayRow.levante, finalizador: todayRow.finalizador, total: todayTotal },
+    todayConsumption: { ...Object.fromEntries(TYPES.map((t) => [t, todayRow[t]])), total: todayTotal },
     avgDailyConsumption: avgTotal,
     stock,
     trend,
     corrales,
+    lotes,
+    sinLote: loose.corrales.length ? loose : null,
     activity: activity.results || [],
   });
 };

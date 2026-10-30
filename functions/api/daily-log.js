@@ -4,6 +4,7 @@
 
 import { requireUser, requireAdmin, json } from '../_lib/auth.js';
 import { todayStr } from '../_lib/time.js';
+import { zeroByType } from '../_lib/foods.js';
 
 export const onRequestGet = async ({ request, env }) => {
   try {
@@ -55,7 +56,7 @@ export const onRequestGet = async ({ request, env }) => {
   const perCorral = {};
   for (const r of cons.results || []) {
     const k = r.corralId;
-    perCorral[k] = perCorral[k] || { corralId: k, corralName: r.corralName, levante: 0, finalizador: 0 };
+    perCorral[k] = perCorral[k] || { corralId: k, corralName: r.corralName, ...zeroByType() };
     perCorral[k][r.foodType] += Number(r.bultos);
   }
 

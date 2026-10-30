@@ -58,10 +58,16 @@ const ERRORS_ES = {
   db_not_initialized:
     'La base de datos está vacía: faltan las tablas. Hay que ejecutar las migraciones.',
   db_needs_update:
-    'La base de datos necesita una actualización. Ejecuta: npm run db:remote:update-types',
+    'La base de datos no se pudo actualizar sola. Recarga la página; si sigue igual, avisa al administrador del sistema.',
   bad_weight: 'Escribe el peso total del grupo en kg.',
   weight_implausible: (d) =>
     `Ese peso parece incorrecto: serían ${num(d.perAnimal)} kg por animal. Escribe el peso TOTAL del grupo, no el de un animal.`,
+  bad_price: 'Escribe el precio de un bulto, sin IVA, mayor que 0.',
+  bad_lote_name: 'Escribe un nombre para el lote (máximo 40 letras).',
+  lote_name_taken: 'Ya existe un lote con ese nombre.',
+  lote_not_found: 'El lote no existe.',
+  lote_not_empty: 'Primero pasa los corrales de este lote a otro lote o a “Sin lote”.',
+  bad_request: 'La solicitud no es válida.',
   bad_kg_per_bulto: 'Los kg por bulto deben ser un número mayor que 0.',
   server_error: 'Error interno del servidor. Intenta de nuevo.',
 };

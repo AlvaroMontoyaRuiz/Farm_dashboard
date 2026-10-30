@@ -5,7 +5,8 @@ import StockCard from '../components/StockCard.jsx';
 import ConsumptionChart from '../components/ConsumptionChart.jsx';
 import CorralGrid from '../components/CorralGrid.jsx';
 import ActivityFeed from '../components/ActivityFeed.jsx';
-import { num, bultosWord, longDay, timeLabel, TYPE_COLOR } from '../lib/format.js';
+import LotesPanel from '../components/LotesPanel.jsx';
+import { num, bultosWord, longDay, timeLabel, FOOD_TYPES, TYPE_LABEL, TYPE_COLOR } from '../lib/format.js';
 
 export default function Dashboard({ user }) {
   const isAdmin = user?.role === 'admin';
@@ -111,8 +112,9 @@ export default function Dashboard({ user }) {
             <span className="text-ink-faint text-[20px] font-semibold"> {bultosWord(d.todayConsumption.total)}</span>
           </p>
           <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2.5">
-            <LegendDot color={TYPE_COLOR.levante}>Levante <b className="text-ink font-semibold">{num(d.todayConsumption.levante)}</b></LegendDot>
-            <LegendDot color={TYPE_COLOR.finalizador}>Finalizador <b className="text-ink font-semibold">{num(d.todayConsumption.finalizador)}</b></LegendDot>
+            {FOOD_TYPES.map((t) => (
+              <LegendDot key={t} color={TYPE_COLOR[t]}>{TYPE_LABEL[t]} <b className="text-ink font-semibold">{num(d.todayConsumption[t])}</b></LegendDot>
+            ))}
           </div>
           <p className="text-sm text-ink-soft mt-1.5">
             {d.avgDailyConsumption > 0 ? `Promedio diario: ${num(d.avgDailyConsumption)} ${bultosWord(d.avgDailyConsumption)}` : 'Aún sin promedio'}
@@ -120,10 +122,14 @@ export default function Dashboard({ user }) {
         </div>
       </section>
 
+      {/* Lotes: groups of corrales */}
+      <LotesPanel lotes={d.lotes} sinLote={d.sinLote} corrales={d.corrales} isAdmin={isAdmin} onChanged={load} />
+
       {/* Stock */}
-      <div className="grid md:grid-cols-2 gap-5">
-        <StockCard type="levante" data={d.stock.levante} linkTo={isAdmin ? '/inventario?tab=movimientos' : undefined} />
-        <StockCard type="finalizador" data={d.stock.finalizador} linkTo={isAdmin ? '/inventario?tab=movimientos' : undefined} />
+      <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-5">
+        {FOOD_TYPES.map((t) => (
+          <StockCard key={t} type={t} data={d.stock[t]} linkTo={isAdmin ? '/inventario?tab=movimientos' : undefined} />
+        ))}
       </div>
 
       {/* Trend + activity */}

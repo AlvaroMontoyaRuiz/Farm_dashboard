@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api.js';
 import { Panel, Skeleton } from '../components/ui.jsx';
-import { localToday, longDay, moveLabel, num2, TYPE_LABEL, TYPE_COLOR } from '../lib/format.js';
+import { localToday, longDay, moveLabel, num2, FOOD_TYPES, sumTypes, TYPE_LABEL, TYPE_COLOR } from '../lib/format.js';
 
 export default function DailyLog() {
   const today = localToday();
@@ -42,8 +42,9 @@ export default function DailyLog() {
                   <thead className="bg-field text-left text-ink-soft">
                     <tr>
                       <th className="px-3 py-2 font-medium">Corral</th>
-                      <th className="px-3 py-2 font-medium text-right">Levante</th>
-                      <th className="px-3 py-2 font-medium text-right">Finalizador</th>
+                      {FOOD_TYPES.map((t) => (
+                        <th key={t} className="px-3 py-2 font-medium text-right">{TYPE_LABEL[t]}</th>
+                      ))}
                       <th className="px-3 py-2 font-medium text-right">Total</th>
                     </tr>
                   </thead>
@@ -51,9 +52,10 @@ export default function DailyLog() {
                     {data.totalsPerCorral.map((r) => (
                       <tr key={r.corralId} className="border-t border-line">
                         <td data-label="Corral" className="px-3 py-2 whitespace-nowrap">{r.corralName}</td>
-                        <td data-label="Levante" className="px-3 py-2 text-right">{num2(r.levante)}</td>
-                        <td data-label="Finalizador" className="px-3 py-2 text-right">{num2(r.finalizador)}</td>
-                        <td data-label="Total" className="px-3 py-2 text-right font-semibold">{num2(r.levante + r.finalizador)}</td>
+                        {FOOD_TYPES.map((t) => (
+                          <td key={t} data-label={TYPE_LABEL[t]} className="px-3 py-2 text-right">{num2(r[t])}</td>
+                        ))}
+                        <td data-label="Total" className="px-3 py-2 text-right font-semibold">{num2(sumTypes(r))}</td>
                       </tr>
                     ))}
                   </tbody>

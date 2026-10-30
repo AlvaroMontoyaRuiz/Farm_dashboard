@@ -3,7 +3,7 @@
 -- Deletes every record and every user so the app looks brand new:
 --   * all feeding, animal movements, bultos deliveries, deletion history
 --   * all users and open sessions (the /setup page works again)
--- Keeps the 20 corrales (the farm layout), and the database structure.
+-- Keeps the 20 corrales and the lotes (the farm layout), and the database structure.
 -- THIS CANNOT BE UNDONE.
 --
 -- Run it with:   npm run db:remote:reset      (the real, deployed database)

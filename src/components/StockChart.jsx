@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine } from 'recharts';
 import { LegendDot } from './ui.jsx';
-import { num2, longDay, shortDay, dayNumber, TYPE_COLOR } from '../lib/format.js';
+import { num2, longDay, shortDay, dayNumber, TYPE_COLOR, TYPE_LABEL, FOOD_TYPES, sumTypes } from '../lib/format.js';
 
 function Tip({ active, payload, label }) {
   if (!active || !payload || !payload.length) return null;
@@ -9,30 +9,29 @@ function Tip({ active, payload, label }) {
   return (
     <div className="bg-white border border-line rounded-xl shadow-panel px-3 py-2 text-sm">
       <div className="font-semibold mb-1">{longDay(label)}</div>
-      <div className="flex items-center justify-between gap-6">
-        <LegendDot color={TYPE_COLOR.levante}>Levante</LegendDot>
-        <span className="font-semibold">{num2(row.levante)}</span>
-      </div>
-      <div className="flex items-center justify-between gap-6">
-        <LegendDot color={TYPE_COLOR.finalizador}>Finalizador</LegendDot>
-        <span className="font-semibold">{num2(row.finalizador)}</span>
-      </div>
+      {FOOD_TYPES.map((t) => (
+        <div key={t} className="flex items-center justify-between gap-6">
+          <LegendDot color={TYPE_COLOR[t]}>{TYPE_LABEL[t]}</LegendDot>
+          <span className="font-semibold">{num2(row[t])}</span>
+        </div>
+      ))}
     </div>
   );
 }
 
-// End-of-day stock for both feed types. `data` = [{date, levante, finalizador}]
+// End-of-day stock for every feed type. `data` = [{date, levante, engorde, finalizador}]
 export default function StockChart({ data }) {
   const [asTable, setAsTable] = useState(false);
-  const hasData = data.some((d) => d.levante !== 0 || d.finalizador !== 0);
-  const last = data[data.length - 1] || { levante: 0, finalizador: 0 };
+  const hasData = data.some((d) => FOOD_TYPES.some((t) => d[t] !== 0));
+  const last = data[data.length - 1] || {};
 
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 mb-2">
-        <div className="flex items-center gap-4">
-          <LegendDot color={TYPE_COLOR.levante}>Levante <b className="text-ink font-semibold">{num2(last.levante)}</b></LegendDot>
-          <LegendDot color={TYPE_COLOR.finalizador}>Finalizador <b className="text-ink font-semibold">{num2(last.finalizador)}</b></LegendDot>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+          {FOOD_TYPES.map((t) => (
+            <LegendDot key={t} color={TYPE_COLOR[t]}>{TYPE_LABEL[t]} <b className="text-ink font-semibold">{num2(last[t])}</b></LegendDot>
+          ))}
         </div>
         <button type="button" onClick={() => setAsTable((v) => !v)} className="text-sm text-ink-soft underline underline-offset-2 hover:text-ink">
           {asTable ? 'Ver gráfico' : 'Ver tabla'}
@@ -45,16 +44,18 @@ export default function StockChart({ data }) {
             <thead className="bg-field text-left text-ink-soft sticky top-0">
               <tr>
                 <th className="px-3 py-2 font-medium">Día</th>
-                <th className="px-3 py-2 font-medium text-right">Levante</th>
-                <th className="px-3 py-2 font-medium text-right">Finalizador</th>
+                {FOOD_TYPES.map((t) => (
+                  <th key={t} className="px-3 py-2 font-medium text-right">{TYPE_LABEL[t]}</th>
+                ))}
               </tr>
             </thead>
             <tbody>
               {[...data].reverse().map((d) => (
                 <tr key={d.date} className="border-t border-line">
                   <td className="px-3 py-1.5">{shortDay(d.date)}</td>
-                  <td className="px-3 py-1.5 text-right">{num2(d.levante)}</td>
-                  <td className="px-3 py-1.5 text-right">{num2(d.finalizador)}</td>
+                  {FOOD_TYPES.map((t) => (
+                    <td key={t} className="px-3 py-1.5 text-right">{num2(d[t])}</td>
+                  ))}
                 </tr>
               ))}
             </tbody>
@@ -81,8 +82,9 @@ export default function StockChart({ data }) {
               />
               <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 12, fill: '#5B6B60' }} allowDecimals={false} />
               <Tooltip content={<Tip />} />
-              <Line isAnimationActive={false} type="monotone" dataKey="levante" stroke={TYPE_COLOR.levante} strokeWidth={2.5} dot={false} activeDot={{ r: 5, stroke: '#fff', strokeWidth: 2 }} />
-              <Line isAnimationActive={false} type="monotone" dataKey="finalizador" stroke={TYPE_COLOR.finalizador} strokeWidth={2.5} dot={false} activeDot={{ r: 5, stroke: '#fff', strokeWidth: 2 }} />
+              {FOOD_TYPES.map((t) => (
+                <Line key={t} isAnimationActive={false} type="monotone" dataKey={t} stroke={TYPE_COLOR[t]} strokeWidth={2.5} dot={false} activeDot={{ r: 5, stroke: '#fff', strokeWidth: 2 }} />
+              ))}
             </LineChart>
           </ResponsiveContainer>
         </div>

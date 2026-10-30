@@ -125,9 +125,9 @@ Apply the schema and seed to the **remote** database:
 ```bash
 npm run db:remote:init
 npm run db:remote:seed
-npm run db:remote:update
-npm run db:remote:update-types
 ```
+
+(The rest of the structure is created by the app itself the first time you open it.)
 
 ### 3. Create the Pages project
 
@@ -194,23 +194,22 @@ The app never lets the inventory go below zero:
 - **Enfermería:** the animals leave the corral count but keep their history (feed eaten, entry weight, entry date). A **Regreso de enfermería** brings back that many animals with that history. You cannot return more animals than are in the infirmary, and an infirmary exit that already returned cannot be deleted.
 - Exits recorded before this update count as sales.
 
-## Updating an existing database (migration 0003)
+## Lotes, feed types and prices
 
-Weights and kg per bulto need three new columns/tables. On a database that already has migrations 0001 and 0002, run **once**:
+- **Lotes** (Panel): groups of corrales. The Panel shows how many animals each lote has, which corrales it contains and how many were fed today. The administrator uses **Organizar lotes** to move a corral to another lote, rename lotes, add a new one or delete an empty one. The first time, the app creates Lote 1 (corrales 2, 5, 7, 9), Lote 2 (1, 3, 4, 12), Lote 3 (10, 11) and Lote 4 (6, 8, 13). Corrales without a lote appear under *Sin lote*. The animals of a lote are never stored: they are the sum of its corrales, so they are always right.
+- **Feed types**: Levante, **Engorde** and Finalizador (40 kg per bulto each by default; change it in Bultos → Tipos de bulto). To add another type, add it in `functions/_lib/foods.js`, `src/lib/format.js` and the `TYPES_SQL` list in `functions/_lib/migrate.js`.
+- **Prices** (Bultos, admin only): every delivery (*Ingresos*) is saved with the price of ONE bulto **without IVA**. The IVA (5 %, `IVA_RATE` in `functions/_lib/foods.js`) and the totals are calculated, never stored. Each delivery keeps its own price, so a later refill at a different price does not change the earlier ones. *Bultos → Resumen → Costo de los bultos* shows, per type, the last price, the average price (weighted by bultos), cost per kg, and the totals without IVA, IVA and with IVA. A wrong price is corrected with **Corregir** (no need to delete the delivery).
+
+## Updating an existing database
+
+**The app updates its own database.** The first time anyone uses the site after a new version is deployed, it checks the database and adds whatever is missing (weights, movement types, Engorde, prices, lotes), keeping every record. There is nothing to run.
+
+The older command-line migrations (`db:remote:update` = 0003, `db:remote:update-types` = 0004) still exist but are no longer needed. A new install only needs:
 
 ```bash
-npm run db:remote:update     # real database
-npm run db:local:update      # local test copy
+npm run db:remote:init
+npm run db:remote:seed
 ```
-
-Then run **once** the types update (migration 0004):
-
-```bash
-npm run db:remote:update-types
-npm run db:local:update-types   # local test copy
-```
-
-Until each one is run, the app answers *"La base de datos necesita una actualización"*. New installs run `db:remote:init`, `db:remote:seed`, `db:remote:update` and `db:remote:update-types`, in that order.
 
 ## Start from zero (clean records and users)
 
