@@ -10,6 +10,8 @@ import Inventario from './pages/Inventario.jsx';
 import DailyLog from './pages/DailyLog.jsx';
 import DeletionLog from './pages/DeletionLog.jsx';
 import Camadas from './pages/Camadas.jsx';
+import ConsumoGrid from './pages/ConsumoGrid.jsx';
+import ConsumoCorral from './pages/ConsumoCorral.jsx';
 
 export default function App() {
   const [user, setUser] = useState(undefined); // undefined=loading, null=anon
@@ -79,7 +81,19 @@ export default function App() {
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-5 sm:py-7">
         <Routes>
           <Route path="/" element={<Dashboard user={user} />} />
-          <Route path="/consumo" element={<Consumo user={user} />} />
+          {/* Workers feed from a simple tablet screen: all corrales, then +/− per type of bulto. The administrator keeps the detailed form. */}
+          <Route
+            path="/consumo"
+            element={
+              user.role === 'admin' ? (
+                <Consumo user={user} />
+              ) : (
+                <WorkerConsumoEntry />
+              )
+            }
+          />
+          <Route path="/consumo/corrales" element={<ConsumoGrid user={user} />} />
+          <Route path="/consumo/corral/:corralId" element={<ConsumoCorral user={user} />} />
           <Route path="/animales" element={<Animales user={user} />} />
           {/* Workers only get the Panel, Consumo and Animales. */}
           <Route path="/inventario" element={user.role === 'admin' ? <Inventario user={user} /> : <Navigate to="/" />} />
@@ -96,6 +110,12 @@ export default function App() {
       <footer className="text-xs text-ink-faint text-center py-4">Inventario Finca</footer>
     </div>
   );
+}
+
+// Old links like /consumo?corral=7 (Panel tiles) open that corral's tablet screen.
+function WorkerConsumoEntry() {
+  const corral = new URLSearchParams(useLocation().search).get('corral');
+  return <Navigate to={corral ? `/consumo/corral/${corral}` : '/consumo/corrales'} replace />;
 }
 
 function NavItem({ to, end, children }) {

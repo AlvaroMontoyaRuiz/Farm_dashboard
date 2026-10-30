@@ -19,6 +19,7 @@ const ERRORS_ES = {
   bad_food_type: 'Tipo de comida inválido.',
   bad_quantity: 'Cantidad inválida.',
   bad_bultos: 'Cantidad de bultos inválida.',
+  nothing_to_remove: 'Hoy no hay consumo para quitar en este corral.',
   bad_movement: 'Tipo de movimiento inválido.',
   bad_reason: 'Elige el tipo de salida: venta, enfermería o muerte.',
   not_enough_infirmary: (d) =>
@@ -52,7 +53,7 @@ const ERRORS_ES = {
   bad_table: 'Tabla no válida.',
   bad_id: 'ID no válido.',
   not_found: 'El registro no existe.',
-  not_your_record: 'Solo puedes eliminar los registros que creaste.',
+  not_your_record: 'Solo puedes quitar o eliminar lo que tú registraste. Si lo registró otra persona, pídele al administrador que lo corrija.',
   db_binding_missing:
     'La base de datos no está conectada al proyecto (falta el binding "DB" en Cloudflare).',
   db_not_initialized:

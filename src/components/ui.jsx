@@ -18,7 +18,7 @@ export function Panel({ title, subtitle, action, children, className = '', pad =
 }
 
 // Segmented control: options = [{value,label}]
-export function Segmented({ value, onChange, options, label }) {
+export function Segmented({ value, onChange, options, label, large = false }) {
   return (
     <div role="group" aria-label={label} className="inline-flex bg-field rounded-full p-0.5 text-sm">
       {options.map((o) => (
@@ -27,7 +27,7 @@ export function Segmented({ value, onChange, options, label }) {
           type="button"
           aria-pressed={value === o.value}
           onClick={() => onChange(o.value)}
-          className={`px-3 py-1 rounded-full font-medium whitespace-nowrap transition-colors ${
+          className={`${large ? 'px-5 min-h-[44px]' : 'px-3 py-1'} rounded-full font-medium whitespace-nowrap transition-colors ${
             value === o.value ? 'bg-white text-ink shadow-sm' : 'text-ink-soft hover:text-ink'
           }`}
         >

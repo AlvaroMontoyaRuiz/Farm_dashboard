@@ -208,6 +208,14 @@ The app never lets the inventory go below zero:
 - **Camadas** (admin menu): mortality per lote over all its history, plus the history of every camada (start, end, days, entered, deaths, sold, mortality).
 - Nothing is stored: it is calculated from the animal movements, so deleting or correcting a record fixes the numbers. It uses the corrales each lote has today; moving a corral to another lote recalculates the history of both lotes.
 
+## Feeding screen for workers (tablet)
+
+Workers open **Consumo** and see every corral as a big tile (animals, "Listo"/"Falta" for today). Tapping a corral opens its page with one card per type of bulto (Levante, Engorde, Finalizador): a big **+** adds a bulto, a big **−** takes one off, and the number in the middle is what the corral got today. A switch at the top changes each tap between 1 bulto and ½ bulto.
+
+- **+** adds to the record that person already has today for that corral and type, so ten taps are one line, not ten. It respects the stock in storage (it stops at 0 even if two people tap at once).
+- **−** takes bultos off today's feeding. Workers can only take off what they registered themselves; the administrator can take off anyone's. Everything taken off is copied to *Historial eliminados* with the reason "Se quitó con el botón −".
+- The administrator keeps the detailed form (other dates, notes) at **Consumo**, with a link to see the workers' screen. Links from the Panel (`/consumo?corral=7`) open the corral's tablet page for workers.
+
 ## Updating an existing database
 
 **The app updates its own database.** The first time anyone uses the site after a new version is deployed, it checks the database and adds whatever is missing (weights, movement types, Engorde, prices, lotes), keeping every record. There is nothing to run.

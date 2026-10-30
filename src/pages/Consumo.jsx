@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../lib/api.js';
 import { Panel, Skeleton } from '../components/ui.jsx';
 import ConfirmDelete from '../components/ConfirmDelete.jsx';
@@ -69,6 +69,11 @@ export default function Consumo() {
       <div>
         <h1 className="font-display font-bold text-[30px] leading-tight">Consumo</h1>
         <p className="text-ink-soft">Registra los bultos que entregaste a cada corral.</p>
+        <p className="text-sm mt-1">
+          <Link to="/consumo/corrales" className="font-semibold text-farm-green underline underline-offset-2">
+            Ver la pantalla de los trabajadores (tablet)
+          </Link>
+        </p>
       </div>
 
       <div className="grid lg:grid-cols-3 gap-5">
