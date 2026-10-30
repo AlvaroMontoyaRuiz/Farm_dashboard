@@ -78,10 +78,11 @@ function Metric({ label, value, hint }) {
 function NotRated({ c, corralName, onClose }) {
   const animals = `${c.animals} ${c.animals === 1 ? 'animal' : 'animales'}`;
   const dead = c.type === 'muerte';
+  const moved = c.type === 'traslado';
   return (
     <div className="rounded-2xl p-4 bg-white border border-line shadow-panel text-ink" role="status">
       <div className="flex items-start justify-between gap-3">
-        <p className="text-sm font-semibold">{dead ? 'Salida por muerte' : 'Salida a enfermería'}: sin calificación</p>
+        <p className="text-sm font-semibold">{dead ? 'Salida por muerte' : moved ? 'Traslado a otro corral' : 'Salida a enfermería'}: sin calificación</p>
         {onClose && (
           <button type="button" onClick={onClose} className="-mt-1 -mr-1 h-10 w-10 rounded-lg text-xl leading-none hover:bg-black/5" aria-label="Cerrar">
             ×
@@ -94,6 +95,8 @@ function NotRated({ c, corralName, onClose }) {
       <p className="text-sm mt-1 text-ink-soft">
         {dead
           ? 'Ese alimento se suma a la conversión de los animales que quedan en el corral, porque salió de la bodega.'
+          : moved
+          ? 'Se llevan consigo el alimento que ya comieron, su peso de entrada y su fecha de entrada. Su conversión se calcula cuando se vendan.'
           : 'Su historial (alimento y peso de entrada) queda guardado hasta que regresen de enfermería. Mientras tanto no cuentan en el corral.'}
       </p>
     </div>

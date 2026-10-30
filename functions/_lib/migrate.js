@@ -9,6 +9,7 @@
 //   0004  reason on animal movements (venta / enfermeria / muerte / regreso_enfermeria)
 //   0005  'engorde' feed type + price per bulto on every delivery
 //   0006  lotes (groups of corrales)
+//   0007  traslados: requests to move animals between corrales + transfer_id on movements
 //
 // Steps 0005 and 0006 are ONE atomic batch whose first statement fails if the step was
 // already applied; the failure rolls the whole batch back, so nothing is ever half-done.
@@ -187,6 +188,34 @@ const STEPS = [
     },
   },
 ];
+
+STEPS.push({
+  id: '0007',
+  async needed(db) {
+    return !(await hasTable(db, 'transfer_requests')) || !(await hasColumn(db, 'animal_movements', 'transfer_id'));
+  },
+  async run(db) {
+    await db
+      .prepare(
+        `CREATE TABLE IF NOT EXISTS transfer_requests (
+           id INTEGER PRIMARY KEY AUTOINCREMENT,
+           from_corral_id INTEGER NOT NULL REFERENCES corrales(id),
+           to_corral_id INTEGER NOT NULL REFERENCES corrales(id),
+           quantity INTEGER NOT NULL CHECK (quantity > 0),
+           note TEXT,
+           status TEXT NOT NULL DEFAULT 'pendiente' CHECK (status IN ('pendiente','aprobada','rechazada','cancelada')),
+           requested_by INTEGER REFERENCES users(id),
+           requested_at TEXT NOT NULL DEFAULT (datetime('now')),
+           resolved_by INTEGER REFERENCES users(id),
+           resolved_at TEXT,
+           decision_note TEXT)`
+      )
+      .run();
+    await db.prepare(`CREATE INDEX IF NOT EXISTS idx_transfer_status ON transfer_requests(status)`).run();
+    // adding the column fails if another request already did this
+    await db.prepare(`ALTER TABLE animal_movements ADD COLUMN transfer_id INTEGER`).run();
+  },
+});
 
 let ready = null;
 

@@ -6,6 +6,7 @@ import ConsumptionChart from '../components/ConsumptionChart.jsx';
 import CorralGrid from '../components/CorralGrid.jsx';
 import ActivityFeed from '../components/ActivityFeed.jsx';
 import LotesPanel from '../components/LotesPanel.jsx';
+import Avisos from '../components/Avisos.jsx';
 import { num, bultosWord, longDay, timeLabel, FOOD_TYPES, TYPE_LABEL, TYPE_COLOR } from '../lib/format.js';
 
 export default function Dashboard({ user }) {
@@ -76,6 +77,9 @@ export default function Dashboard({ user }) {
         </div>
       </div>
       {err && <p className="text-sm text-alert">No se pudo actualizar: {err}</p>}
+
+      {/* Notifications: low stock, requests waiting for approval */}
+      <Avisos stock={d.stock} limit={d.lowStockLimit} pending={d.pendingRequests} />
 
       {/* Summary strip: one instrument, three readings */}
       <section className="bg-white rounded-2xl border border-line shadow-panel grid sm:grid-cols-3 sm:divide-x divide-y sm:divide-y-0 divide-line settle">

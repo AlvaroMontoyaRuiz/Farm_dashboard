@@ -7,15 +7,17 @@
 //   - the lotes (groups of corrales) with their animals and today's feeding
 //   - the latest activity across consumption, animal movements and food lots
 
-import { requireUser, json } from '../_lib/auth.js';
+import { requireUser, requireAdmin, json } from '../_lib/auth.js';
 import { todayStr, addDays, lastDays, avgWindow } from '../_lib/time.js';
 import { FOOD_TYPES as TYPES, zeroByType } from '../_lib/foods.js';
 import { loadBatches } from '../_lib/batches.js';
+// Warn the administrator when a type of bulto is below this many bultos in storage.
+const LOW_STOCK_BULTOS = 40;
 const r2 = (n) => Math.round(Number(n || 0) * 100) / 100;
 
 export const onRequestGet = async ({ request, env }) => {
   try {
-    await requireUser(request, env);
+    requireAdmin(await requireUser(request, env)); // the Panel is for the administrator only
   } catch (resp) {
     return resp;
   }
@@ -26,7 +28,7 @@ export const onRequestGet = async ({ request, env }) => {
   const firstRow = await env.DB.prepare(`SELECT MIN(consumed_at) AS d FROM feed_consumption`).first();
   const win = avgWindow(firstRow && firstRow.d, today);
 
-  const [lots, consumedAll, daily, animals, perCorral, activity, lotesRes, batchesByLote] = await Promise.all([
+  const [lots, consumedAll, daily, animals, perCorral, activity, lotesRes, batchesByLote, pendingRes] = await Promise.all([
     env.DB.prepare(`SELECT type, COALESCE(SUM(bultos_received),0) AS n FROM food_lots GROUP BY type`).all(),
     env.DB.prepare(`SELECT food_type AS type, COALESCE(SUM(bultos),0) AS n FROM feed_consumption GROUP BY food_type`).all(),
     env.DB.prepare(
@@ -57,7 +59,8 @@ export const onRequestGet = async ({ request, env }) => {
            FROM feed_consumption fc JOIN corrales c ON c.id = fc.corral_id
       LEFT JOIN users u ON u.id = fc.created_by
          UNION ALL
-         SELECT 'animales', m.created_at, u.display_name, c.name, COALESCE(m.reason, m.movement), m.quantity, m.note
+         SELECT 'animales', m.created_at, u.display_name, c.name,
+                CASE WHEN m.reason = 'traslado' THEN 'traslado_' || m.movement ELSE COALESCE(m.reason, m.movement) END, m.quantity, m.note
            FROM animal_movements m JOIN corrales c ON c.id = m.corral_id
       LEFT JOIN users u ON u.id = m.created_by
          UNION ALL
@@ -67,6 +70,7 @@ export const onRequestGet = async ({ request, env }) => {
     ).all(),
     env.DB.prepare(`SELECT id, name FROM lotes ORDER BY id`).all(),
     loadBatches(env, today),
+    env.DB.prepare(`SELECT COUNT(*) AS n FROM transfer_requests WHERE status = 'pendiente'`).first(),
   ]);
 
   // ---- trend (30 days, missing days filled with zero)
@@ -153,6 +157,8 @@ export const onRequestGet = async ({ request, env }) => {
     avgDailyConsumption: avgTotal,
     stock,
     trend,
+    lowStockLimit: LOW_STOCK_BULTOS,
+    pendingRequests: Number(pendingRes?.n || 0),
     corrales,
     lotes,
     sinLote: loose.corrales.length ? loose : null,

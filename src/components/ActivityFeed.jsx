@@ -15,6 +15,8 @@ function describe(a) {
     venta: <><b>{who}</b> vendió <b>{n} {animals}</b> de {a.corral}</>,
     enfermeria: <><b>{who}</b> pasó <b>{n} {animals}</b> de {a.corral} a enfermería</>,
     muerte: <><b>{who}</b> registró la muerte de <b>{n} {animals}</b> en {a.corral}</>,
+    traslado_salida: <><b>{who}</b> trasladó <b>{n} {animals}</b> desde {a.corral}</>,
+    traslado_ingreso: <><b>{who}</b> pasó <b>{n} {animals}</b> a {a.corral} (traslado)</>,
   };
   return { icon: <IconPaw />, text: t[a.sub] || <><b>{who}</b> sacó <b>{n} {animals}</b> de {a.corral}</> };
 }

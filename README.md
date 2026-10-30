@@ -216,9 +216,19 @@ Workers open **Consumo** and see every corral as a big tile (animals, "Listo"/"F
 - **−** takes bultos off today's feeding. Workers can only take off what they registered themselves; the administrator can take off anyone's. Everything taken off is copied to *Historial eliminados* with the reason "Se quitó con el botón −".
 - The administrator keeps the detailed form (other dates, notes) at **Consumo**, with a link to see the workers' screen. Links from the Panel (`/consumo?corral=7`) open the corral's tablet page for workers.
 
+## Low-stock notices (administrator)
+
+The top of the **Panel** has an **Avisos** card. When a type of bulto in storage drops **below 40 bultos** it shows a line ("Quedan 13 bultos de Levante (menos de 40)") with a *Registrar ingreso* button, so there is time to buy before it runs out; at 0 it says "Sin bultos". Types that were never bought are not flagged. The limit is `LOW_STOCK_BULTOS` in `functions/api/dashboard.js`.
+
+## Moving animals between corrales: Solicitudes
+
+- A **worker** opens **Solicitudes**, picks the origin corral, the destination, how many animals and an optional note. The request stays **Pendiente** and **nothing moves** until the administrator approves. The worker can cancel it while it is pending and sees the result (Aprobada / Rechazada, with the administrator's reason) afterwards.
+- The **administrator** sees the pending requests first (a red number on the *Solicitudes* menu and a line in Avisos), and presses **Aprobar traslado** or **Rechazar** (with an optional reason). Approval moves the animals at that moment, and it is refused if the origin no longer has enough animals. The administrator can also move animals directly from the same page.
+- An approved move is recorded as an exit from the origin and an entry in the destination (*Traslado*), so animal counts are right everywhere. Feed given before the move is carried to the destination for the conversion (FCR). Between two different lotes, the camada of the lote they leave loses them (not counted as sold or dead) and the lote they join counts them as entered. These records cannot be deleted; to undo a move, request the opposite one.
+
 ## Updating an existing database
 
-**The app updates its own database.** The first time anyone uses the site after a new version is deployed, it checks the database and adds whatever is missing (weights, movement types, Engorde, prices, lotes), keeping every record. There is nothing to run.
+**The app updates its own database.** The first time anyone uses the site after a new version is deployed, it checks the database and adds whatever is missing (weights, movement types, Engorde, prices, lotes, move requests), keeping every record. There is nothing to run.
 
 The older command-line migrations (`db:remote:update` = 0003, `db:remote:update-types` = 0004) still exist but are no longer needed. A new install only needs:
 
@@ -241,7 +251,7 @@ Afterwards open `/setup` and create the administrator and workers again. `npm ru
 ## Roles
 
 - **admin**: can do everything — register food lots, see the deletion log, delete anyone's records.
-- **worker**: sees only **Panel, Consumo and Animales** (records consumption and ingreso/salida with weights; can delete only their own records). Bultos, Historial diario and Historial eliminados are administrator-only, in the menu and on the server.
+- **worker**: sees only **Consumo** (the tablet feeding screen) and **Solicitudes** (asks to move animals between corrales). The Panel, Animales, Bultos, Camadas, Historial diario and Historial eliminados are administrator-only, in the menu **and on the server** (typing the address sends a worker back to Consumo). Workers no longer register animal ingresos, sales or deaths: the administrator does.
 
 ## Deletion behavior
 

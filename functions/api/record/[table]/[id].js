@@ -42,6 +42,9 @@ export const onRequestDelete = async ({ request, env, params }) => {
     if (hit) return json({ error: 'would_go_negative', scope: 'animals', date: hit.split('|')[1] }, 409);
   }
 
+  // A traslado is a pair (exit + entry). Deleting one half would create or lose animals.
+  if (table === 'animal_movements' && row.reason === 'traslado') return json({ error: 'transfer_locked' }, 409);
+
   if (table === 'animal_movements' && row.movement === 'salida' && row.reason === 'enfermeria') {
     // Removing this exit would leave more animals returned than ever sent to the infirmary.
     if ((await infirmaryIn(env, row.corral_id, id)) < 0) return json({ error: 'would_go_negative', scope: 'enfermeria' }, 409);

@@ -14,6 +14,9 @@
 //   muerte                 -present, +deaths
 //   enfermeria             no change: the animals are still part of the batch while in the infirmary
 //   regreso_enfermeria     no change
+//   traslado (move between corrales): inside the same lote nothing changes. Between two lotes, the
+//                          lote they leave loses them (-present, not a sale and not a death) and the lote
+//                          they join counts them as entered.
 // A batch closes when `present` reaches 0, so animals in the infirmary keep it open.
 //
 // The lote of a batch is the lote its corrales belong to NOW. If the administrator moves a corral to
@@ -27,8 +30,23 @@ const dayNo = (d) => Date.UTC(+d.slice(0, 4), +d.slice(5, 7) - 1, +d.slice(8, 10
 // Returns Map(loteId -> [batch, ...]) with batches oldest first.
 // batch = { n, start, end|null, entered, deaths, sold, present, mortality (%) , open }
 export function computeBatches(movements, loteOf, today) {
+  // lote of both halves of every traslado, to tell moves inside a lote from moves between lotes
+  const halves = new Map();
+  for (const m of movements) {
+    if (m.reason === 'traslado' && m.transfer_id != null) {
+      const h = halves.get(m.transfer_id) || {};
+      h[m.movement === 'salida' ? 'from' : 'to'] = loteOf.get(m.corral_id);
+      halves.set(m.transfer_id, h);
+    }
+  }
+  const sameLote = (m) => {
+    const h = halves.get(m.transfer_id);
+    return !h || h.from === h.to; // unpaired halves are ignored too
+  };
+
   const byLote = new Map();
   for (const m of movements) {
+    if (m.reason === 'traslado' && sameLote(m)) continue;
     const lote = loteOf.get(m.corral_id);
     if (lote == null) continue;
     if (!byLote.has(lote)) byLote.set(lote, []);
@@ -50,7 +68,7 @@ export function computeBatches(movements, loteOf, today) {
     let cur = null;
     for (const m of list) {
       const q = Number(m.quantity);
-      const isNew = m.movement === 'ingreso' && m.reason !== 'regreso_enfermeria';
+      const isNew = m.movement === 'ingreso' && m.reason !== 'regreso_enfermeria'; // includes arrivals by traslado
       if (isNew) {
         if (!cur) cur = { n: batches.length + 1, start: m.movement_at, end: null, entered: 0, deaths: 0, sold: 0, present: 0 };
         cur.entered += q;
@@ -63,6 +81,8 @@ export function computeBatches(movements, loteOf, today) {
         cur.present -= q;
       } else if (m.reason === 'enfermeria') {
         continue;
+      } else if (m.reason === 'traslado') {
+        cur.present -= q; // moved to another lote: neither sold nor dead
       } else {
         cur.sold += q; // venta (and old records without a type)
         cur.present -= q;
@@ -99,7 +119,7 @@ export function totalsOf(batches) {
 // Reads the movements and the makeup of the lotes, and returns Map(loteId -> batches).
 export async function loadBatches(env, today) {
   const [mv, co] = await Promise.all([
-    env.DB.prepare(`SELECT id, corral_id, movement, reason, quantity, movement_at, created_at FROM animal_movements`).all(),
+    env.DB.prepare(`SELECT id, corral_id, movement, reason, quantity, movement_at, created_at, transfer_id FROM animal_movements`).all(),
     env.DB.prepare(`SELECT id, lote_id FROM corrales`).all(),
   ]);
   const loteOf = new Map((co.results || []).map((c) => [c.id, c.lote_id]));

@@ -81,4 +81,7 @@ export const MOVE_LABEL = {
   enfermeria: 'Enfermería',
   muerte: 'Muerte',
 };
-export const moveLabel = (r) => (r.movement === 'ingreso' ? MOVE_LABEL[r.reason || 'ingreso'] : MOVE_LABEL[r.reason || 'venta']);
+export const moveLabel = (r) =>
+  r.reason === 'traslado'
+    ? r.movement === 'ingreso' ? 'Traslado (llegada)' : 'Traslado (salida)'
+    : r.movement === 'ingreso' ? MOVE_LABEL[r.reason || 'ingreso'] : MOVE_LABEL[r.reason || 'venta'];

@@ -1,3 +1,4 @@
+// Administrator only. Workers do not register animals; they ask for moves in /api/solicitudes.
 // GET  /api/animals?corralId=&from=&to=   — list movements (filterable)
 // POST /api/animals  { corralId, movement:'ingreso'|'salida', reason?, quantity, weightKg?, movementAt?, note? }
 //   exits : reason = 'venta' (default) | 'enfermeria' | 'muerte'
@@ -5,14 +6,14 @@
 //   weightKg = TOTAL weight of the group. Required for new entries and sales; optional for deaths,
 //   infirmary exits and returns. An exit answers with its feed conversion (only sales are rated).
 
-import { requireUser, json } from '../_lib/auth.js';
+import { requireUser, requireAdmin, json } from '../_lib/auth.js';
 import { TODAY_SQL, todayStr } from '../_lib/time.js';
 import { exitAnalysis } from '../_lib/fcr.js';
 import { animalsIn, infirmaryIn, loadAnimalEvents, animalKey, newNegative, isDate, nowTs } from '../_lib/stock.js';
 
 export const onRequestGet = async ({ request, env }) => {
   try {
-    await requireUser(request, env);
+    requireAdmin(await requireUser(request, env)); // workers ask for moves in Solicitudes instead
   } catch (r) {
     return r;
   }
@@ -57,6 +58,7 @@ export const onRequestPost = async ({ request, env }) => {
   let user;
   try {
     user = await requireUser(request, env);
+    requireAdmin(user);
   } catch (r) {
     return r;
   }

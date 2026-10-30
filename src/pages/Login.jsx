@@ -59,10 +59,10 @@ export default function Login({ onLogin }) {
       <div className="mt-6 rounded-xl bg-field px-4 py-3 text-sm text-ink-soft space-y-1.5">
         <p className="font-semibold text-ink">¿Qué puede hacer cada rol?</p>
         <p>
-          <b className="text-ink">Administrador:</b> registra los ingresos de bultos, ve todo el inventario y el historial de eliminados.
+          <b className="text-ink">Administrador:</b> registra los ingresos de bultos y de animales, aprueba los traslados y ve todo el inventario.
         </p>
         <p>
-          <b className="text-ink">Trabajador:</b> registra el consumo de alimento y el ingreso o salida de animales.
+          <b className="text-ink">Trabajador:</b> registra el consumo de alimento y pide mover animales de un corral a otro (el administrador lo aprueba).
         </p>
       </div>
 

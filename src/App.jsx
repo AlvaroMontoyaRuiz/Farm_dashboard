@@ -12,6 +12,7 @@ import DeletionLog from './pages/DeletionLog.jsx';
 import Camadas from './pages/Camadas.jsx';
 import ConsumoGrid from './pages/ConsumoGrid.jsx';
 import ConsumoCorral from './pages/ConsumoCorral.jsx';
+import Solicitudes from './pages/Solicitudes.jsx';
 
 export default function App() {
   const [user, setUser] = useState(undefined); // undefined=loading, null=anon
@@ -24,6 +25,20 @@ export default function App() {
       .then((r) => setUser(r.user))
       .catch(() => setUser(null));
   }, []);
+
+  // Admin: how many move requests are waiting (badge in the menu)
+  const [pending, setPending] = useState(0);
+  useEffect(() => {
+    if (!user || user.role !== 'admin') return undefined;
+    const load = () => api.get('/api/solicitudes?count=1').then((r) => setPending(r.pending)).catch(() => {});
+    load();
+    const t = setInterval(load, 30000);
+    window.addEventListener('solicitudes:changed', load);
+    return () => {
+      clearInterval(t);
+      window.removeEventListener('solicitudes:changed', load);
+    };
+  }, [user]);
 
   async function logout() {
     await api.post('/api/auth/logout');
@@ -63,9 +78,11 @@ export default function App() {
             </div>
           </div>
           <nav aria-label="Principal" className="flex gap-1.5 pb-2.5 -mx-1 px-1 overflow-x-auto no-scrollbar text-[15px] md:text-base">
-            <NavItem to="/" end>Panel</NavItem>
+            {/* Workers only get Consumo and Solicitudes. The Panel and Animales are for the administrator. */}
+            {user.role === 'admin' && <NavItem to="/" end>Panel</NavItem>}
             <NavItem to="/consumo">Consumo</NavItem>
-            <NavItem to="/animales">Animales</NavItem>
+            {user.role === 'admin' && <NavItem to="/animales">Animales</NavItem>}
+            <NavItem to="/solicitudes" badge={user.role === 'admin' ? pending : 0}>Solicitudes</NavItem>
             {user.role === 'admin' && (
               <>
                 <NavItem to="/inventario">Bultos</NavItem>
@@ -80,7 +97,7 @@ export default function App() {
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-5 sm:py-7">
         <Routes>
-          <Route path="/" element={<Dashboard user={user} />} />
+          <Route path="/" element={user.role === 'admin' ? <Dashboard user={user} /> : <Navigate to="/consumo" replace />} />
           {/* Workers feed from a simple tablet screen: all corrales, then +/− per type of bulto. The administrator keeps the detailed form. */}
           <Route
             path="/consumo"
@@ -94,8 +111,9 @@ export default function App() {
           />
           <Route path="/consumo/corrales" element={<ConsumoGrid user={user} />} />
           <Route path="/consumo/corral/:corralId" element={<ConsumoCorral user={user} />} />
-          <Route path="/animales" element={<Animales user={user} />} />
-          {/* Workers only get the Panel, Consumo and Animales. */}
+          <Route path="/animales" element={user.role === 'admin' ? <Animales user={user} /> : <Navigate to="/consumo" replace />} />
+          <Route path="/solicitudes" element={<Solicitudes user={user} />} />
+          {/* Only the administrator gets the pages below. */}
           <Route path="/inventario" element={user.role === 'admin' ? <Inventario user={user} /> : <Navigate to="/" />} />
           <Route path="/camadas" element={user.role === 'admin' ? <Camadas /> : <Navigate to="/" />} />
           <Route path="/diario" element={user.role === 'admin' ? <DailyLog /> : <Navigate to="/" />} />
@@ -103,7 +121,7 @@ export default function App() {
             path="/eliminados"
             element={user.role === 'admin' ? <DeletionLog /> : <Navigate to="/" />}
           />
-          <Route path="*" element={<Navigate to="/" />} />
+          <Route path="*" element={<Navigate to={user.role === 'admin' ? '/' : '/consumo'} />} />
         </Routes>
       </main>
 
@@ -118,7 +136,7 @@ function WorkerConsumoEntry() {
   return <Navigate to={corral ? `/consumo/corral/${corral}` : '/consumo/corrales'} replace />;
 }
 
-function NavItem({ to, end, children }) {
+function NavItem({ to, end, children, badge = 0 }) {
   return (
     <NavLink
       to={to}
@@ -130,6 +148,11 @@ function NavItem({ to, end, children }) {
       }
     >
       {children}
+      {badge > 0 && (
+        <span className="ml-2 min-w-[22px] h-[22px] px-1.5 rounded-full bg-alert text-white text-xs font-bold inline-grid place-items-center" aria-label={`${badge} por aprobar`}>
+          {badge}
+        </span>
+      )}
     </NavLink>
   );
 }

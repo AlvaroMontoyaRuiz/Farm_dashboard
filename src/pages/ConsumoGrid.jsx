@@ -13,7 +13,7 @@ export default function ConsumoGrid({ user }) {
     let alive = true;
     const load = () =>
       api
-        .get('/api/dashboard')
+        .get('/api/consumption/corrales')
         .then((r) => alive && (setD(r), setErr('')))
         .catch((e) => alive && setErr(e.message));
     load();
@@ -24,7 +24,6 @@ export default function ConsumoGrid({ user }) {
     };
   }, []);
 
-  const loteName = d ? Object.fromEntries(d.lotes.map((l) => [l.id, l.name])) : {};
   const active = d ? d.corrales.filter((c) => c.animals > 0) : [];
   const fed = active.filter((c) => c.fedToday).length;
 
@@ -86,7 +85,7 @@ export default function ConsumoGrid({ user }) {
                     <span className="text-sm text-ink-soft">{c.animals === 1 ? 'animal' : 'animales'}</span>
                   </div>
                   <p className="text-xs text-ink-faint mt-2">
-                    {c.loteId != null && loteName[c.loteId] ? `${loteName[c.loteId]} · ` : ''}
+                    {c.lote ? `${c.lote} · ` : ''}
                     {empty ? 'Vacío' : `Hoy ${num(c.todayBultos)} ${c.todayBultos === 1 ? 'bulto' : 'bultos'}`}
                   </p>
                 </Link>
