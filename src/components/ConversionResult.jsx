@@ -3,6 +3,7 @@ import { RATING, RATING_SCALE, num, num2, fix2 } from '../lib/format.js';
 // The answer shown right after an exit is saved.
 export default function ConversionResult({ c, corralName, onClose }) {
   if (!c) return null;
+  if (c.reason === 'no_aplica') return <NotRated c={c} corralName={corralName} onClose={onClose} />;
   const r = c.rating ? RATING[c.rating] : null;
   const animals = `${c.animals} ${c.animals === 1 ? 'animal' : 'animales'}`;
   let headline;
@@ -69,6 +70,32 @@ function Metric({ label, value, hint }) {
       <dt className="text-xs text-ink-soft">{label}</dt>
       <dd className="font-display font-bold text-lg text-ink leading-tight">{value}</dd>
       <dd className="text-xs text-ink-faint">{hint}</dd>
+    </div>
+  );
+}
+
+// Deaths and infirmary exits are not rated: say what happens with the feed those animals ate.
+function NotRated({ c, corralName, onClose }) {
+  const animals = `${c.animals} ${c.animals === 1 ? 'animal' : 'animales'}`;
+  const dead = c.type === 'muerte';
+  return (
+    <div className="rounded-2xl p-4 bg-white border border-line shadow-panel text-ink" role="status">
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-sm font-semibold">{dead ? 'Salida por muerte' : 'Salida a enfermería'}: sin calificación</p>
+        {onClose && (
+          <button type="button" onClick={onClose} className="-mt-1 -mr-1 h-10 w-10 rounded-lg text-xl leading-none hover:bg-black/5" aria-label="Cerrar">
+            ×
+          </button>
+        )}
+      </div>
+      <p className="text-sm mt-2">
+        {animals} de {corralName} {c.animals === 1 ? 'comió' : 'comieron'} <b>{num(c.feedKg)} kg</b> de alimento antes de salir.
+      </p>
+      <p className="text-sm mt-1 text-ink-soft">
+        {dead
+          ? 'Ese alimento se suma a la conversión de los animales que quedan en el corral, porque salió de la bodega.'
+          : 'Su historial (alimento y peso de entrada) queda guardado hasta que regresen de enfermería. Mientras tanto no cuentan en el corral.'}
+      </p>
     </div>
   );
 }

@@ -98,5 +98,23 @@ export async function animalsIn(env, corralId) {
   return Number(r?.n || 0);
 }
 
+// Animals of one corral that are in the infirmary right now:
+// exits for 'enfermeria' minus entries of type 'regreso_enfermeria'.
+const INFIRMARY_SQL = `COALESCE(SUM(CASE WHEN movement='salida' AND reason='enfermeria' THEN quantity
+                                           WHEN movement='ingreso' AND reason='regreso_enfermeria' THEN -quantity
+                                           ELSE 0 END), 0)`;
+export async function infirmaryIn(env, corralId, excludeId = 0) {
+  const r = await env.DB.prepare(`SELECT ${INFIRMARY_SQL} AS n FROM animal_movements WHERE corral_id = ? AND id <> ?`)
+    .bind(Number(corralId), Number(excludeId))
+    .first();
+  return Number(r?.n || 0);
+}
+export async function infirmaryByCorral(env) {
+  const r = await env.DB.prepare(`SELECT corral_id AS id, ${INFIRMARY_SQL} AS n FROM animal_movements GROUP BY corral_id`).all();
+  const out = {};
+  for (const x of r.results || []) if (Number(x.n) > 0) out[x.id] = Number(x.n);
+  return out;
+}
+
 export const isDate = (s) => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s) && !isNaN(new Date(s + 'T00:00:00Z'));
 export const nowTs = () => new Date().toISOString().slice(0, 19).replace('T', ' ');

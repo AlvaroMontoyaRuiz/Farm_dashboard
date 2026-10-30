@@ -56,7 +56,7 @@ export const onRequestGet = async ({ request, env }) => {
            FROM feed_consumption fc JOIN corrales c ON c.id = fc.corral_id
       LEFT JOIN users u ON u.id = fc.created_by
          UNION ALL
-         SELECT 'animales', m.created_at, u.display_name, c.name, m.movement, m.quantity, m.note
+         SELECT 'animales', m.created_at, u.display_name, c.name, COALESCE(m.reason, m.movement), m.quantity, m.note
            FROM animal_movements m JOIN corrales c ON c.id = m.corral_id
       LEFT JOIN users u ON u.id = m.created_by
          UNION ALL

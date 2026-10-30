@@ -1,11 +1,14 @@
 // GET  /api/animals?corralId=&from=&to=   — list movements (filterable)
-// POST /api/animals  { corralId, movement:'ingreso'|'salida', quantity, weightKg, movementAt?, note? }
-//   weightKg = TOTAL weight of the group that enters/leaves. An exit answers with its feed conversion.
+// POST /api/animals  { corralId, movement:'ingreso'|'salida', reason?, quantity, weightKg?, movementAt?, note? }
+//   exits : reason = 'venta' (default) | 'enfermeria' | 'muerte'
+//   entries: reason = 'regreso_enfermeria' for animals coming back from the infirmary, otherwise omitted
+//   weightKg = TOTAL weight of the group. Required for new entries and sales; optional for deaths,
+//   infirmary exits and returns. An exit answers with its feed conversion (only sales are rated).
 
 import { requireUser, json } from '../_lib/auth.js';
 import { TODAY_SQL, todayStr } from '../_lib/time.js';
 import { exitAnalysis } from '../_lib/fcr.js';
-import { animalsIn, loadAnimalEvents, animalKey, newNegative, isDate, nowTs } from '../_lib/stock.js';
+import { animalsIn, infirmaryIn, loadAnimalEvents, animalKey, newNegative, isDate, nowTs } from '../_lib/stock.js';
 
 export const onRequestGet = async ({ request, env }) => {
   try {
@@ -33,7 +36,7 @@ export const onRequestGet = async ({ request, env }) => {
   }
   const sql = `
     SELECT m.id, m.corral_id AS corralId, c.name AS corralName, m.movement,
-           m.quantity, m.weight_kg AS weightKg, m.movement_at AS movementAt, m.note,
+           m.quantity, m.weight_kg AS weightKg, m.reason, m.movement_at AS movementAt, m.note,
            u.display_name AS createdBy, m.created_at AS createdAt
       FROM animal_movements m
       JOIN corrales c ON c.id = m.corral_id
@@ -57,21 +60,55 @@ export const onRequestPost = async ({ request, env }) => {
   } catch (r) {
     return r;
   }
-  const { corralId, movement, quantity, weightKg, movementAt, note } =
+  const { corralId, movement, quantity, weightKg, movementAt, note, reason: reasonIn } =
     (await request.json().catch(() => ({}))) || {};
   if (!corralId) return json({ error: 'corral_required' }, 400);
   if (!['ingreso', 'salida'].includes(movement)) return json({ error: 'bad_movement' }, 400);
   const q = Number(quantity);
   if (!Number.isInteger(q) || q <= 0) return json({ error: 'bad_quantity' }, 400);
-  const w = Number(weightKg);
-  if (weightKg === undefined || weightKg === null || weightKg === '' || !Number.isFinite(w) || w <= 0) return json({ error: 'bad_weight' }, 400);
-  const perAnimal = w / q;
-  if (perAnimal < 2 || perAnimal > 400) return json({ error: 'weight_implausible', perAnimal: Math.round(perAnimal * 10) / 10 }, 400);
+  // Type of movement
+  let reason;
+  if (movement === 'salida') {
+    reason = reasonIn || 'venta';
+    if (!['venta', 'enfermeria', 'muerte'].includes(reason)) return json({ error: 'bad_reason' }, 400);
+  } else {
+    reason = reasonIn === 'regreso_enfermeria' ? 'regreso_enfermeria' : null;
+  }
+  // Weight of the group: needed for new animals and sales, optional otherwise.
+  const weightOptional = reason === 'muerte' || reason === 'enfermeria' || reason === 'regreso_enfermeria';
+  const blank = weightKg === undefined || weightKg === null || weightKg === '';
+  let w = null;
+  if (!(blank && weightOptional)) {
+    w = Number(weightKg);
+    if (blank || !Number.isFinite(w) || w <= 0) return json({ error: 'bad_weight' }, 400);
+    const perAnimal = w / q;
+    if (perAnimal < 2 || perAnimal > 400) return json({ error: 'weight_implausible', perAnimal: Math.round(perAnimal * 10) / 10 }, 400);
+  }
   const today = todayStr();
   if (movementAt && (!isDate(movementAt) || movementAt > today)) return json({ error: 'bad_date' }, 400);
 
   const corral = await env.DB.prepare(`SELECT id, name FROM corrales WHERE id = ?`).bind(Number(corralId)).first();
   if (!corral) return json({ error: 'corral_not_found' }, 404);
+
+  // Returning from the infirmary: only as many as are there. Re-checked inside the INSERT.
+  if (reason === 'regreso_enfermeria') {
+    const inInf = await infirmaryIn(env, corral.id);
+    if (q > inInf) return json({ error: 'not_enough_infirmary', corral: corral.name, available: Math.max(0, inInf) }, 400);
+    const res = await env.DB.prepare(
+      `INSERT INTO animal_movements (corral_id, movement, quantity, movement_at, note, created_by, weight_kg, reason)
+       SELECT ?1, 'ingreso', ?2, COALESCE(?3, ${TODAY_SQL}), ?4, ?5, ?6, 'regreso_enfermeria'
+        WHERE (SELECT COALESCE(SUM(CASE WHEN movement='salida' AND reason='enfermeria' THEN quantity
+                                        WHEN movement='ingreso' AND reason='regreso_enfermeria' THEN -quantity ELSE 0 END), 0)
+                 FROM animal_movements WHERE corral_id = ?1) >= ?2`
+    )
+      .bind(corral.id, q, movementAt || null, note || null, user.id, w)
+      .run();
+    if (!res.meta?.changes) {
+      const now = await infirmaryIn(env, corral.id);
+      return json({ error: 'not_enough_infirmary', corral: corral.name, available: Math.max(0, now) }, 400);
+    }
+    return json({ ok: true, id: res.meta?.last_row_id });
+  }
 
   if (movement === 'salida') {
     // Rule 1: you cannot take out more animals than the corral has.
@@ -89,12 +126,12 @@ export const onRequestPost = async ({ request, env }) => {
 
     // Re-checked inside the INSERT so two simultaneous exits cannot both succeed.
     const res = await env.DB.prepare(
-      `INSERT INTO animal_movements (corral_id, movement, quantity, movement_at, note, created_by, weight_kg)
-       SELECT ?1, 'salida', ?2, COALESCE(?3, ${TODAY_SQL}), ?4, ?5, ?6
+      `INSERT INTO animal_movements (corral_id, movement, quantity, movement_at, note, created_by, weight_kg, reason)
+       SELECT ?1, 'salida', ?2, COALESCE(?3, ${TODAY_SQL}), ?4, ?5, ?6, ?7
         WHERE (SELECT COALESCE(SUM(CASE WHEN movement='ingreso' THEN quantity ELSE -quantity END), 0)
                  FROM animal_movements WHERE corral_id = ?1) >= ?2`
     )
-      .bind(corral.id, q, movementAt || null, note || null, user.id, w)
+      .bind(corral.id, q, movementAt || null, note || null, user.id, w, reason)
       .run();
     if (!res.meta?.changes) {
       const now = await animalsIn(env, corral.id);

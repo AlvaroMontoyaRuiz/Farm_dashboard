@@ -4,6 +4,7 @@ const REASON = {
   sin_peso: 'Sin pesos',
   sin_consumo: 'Sin consumo',
   sin_ganancia: 'Sin ganancia',
+  no_aplica: 'No aplica',
 };
 
 // Small pill for tables: "2,4 · Buena". The word always accompanies the colour.

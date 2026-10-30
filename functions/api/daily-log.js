@@ -29,7 +29,7 @@ export const onRequestGet = async ({ request, env }) => {
 
   const mov = await env.DB.prepare(
     `SELECT m.id, m.corral_id AS corralId, c.name AS corralName,
-            m.movement, m.quantity, m.note,
+            m.movement, m.reason, m.quantity, m.weight_kg AS weightKg, m.note,
             u.display_name AS createdBy, m.created_at AS createdAt
        FROM animal_movements m
        JOIN corrales c ON c.id = m.corral_id

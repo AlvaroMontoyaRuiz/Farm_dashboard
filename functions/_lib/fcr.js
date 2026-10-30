@@ -17,6 +17,14 @@
 //   FCR                = feed ÷ gain
 // Then S, I and A shrink by the same share, and the animals left behind keep their own history.
 //
+// Types of exit (reason):
+//   venta       rated: this is the conversion shown (Buena / Regular / Mala).
+//   muerte      not rated. The feed those animals ate stays in the batch: it is spread over the
+//               animals that remain, so losses raise the conversion of the group that is sold.
+//   enfermeria  not rated. The animals leave the corral count but keep their history (feed eaten,
+//               entry weight, entry date) in an infirmary pool until a 'regreso_enfermeria' entry
+//               brings them back.
+//
 // Nothing is stored: results are recalculated from the records, so deleting or correcting a
 // record fixes every conversion automatically.
 
@@ -46,6 +54,7 @@ export function analyzeExits(movements, consumption, kgByType = {}) {
       kind: m.movement === 'ingreso' ? 0 : 2,
       date: m.movement_at, at: m.created_at || '', id: m.id,
       q: Number(m.quantity), w: m.weight_kg == null ? null : Number(m.weight_kg),
+      reason: m.movement === 'salida' ? m.reason || 'venta' : m.reason || null,
     });
   }
   for (const c of consumption) {
@@ -57,8 +66,20 @@ export function analyzeExits(movements, consumption, kgByType = {}) {
   for (const events of byCorral.values()) {
     events.sort((a, b) => a.date.localeCompare(b.date) || a.at.localeCompare(b.at) || a.kind - b.kind || a.id - b.id);
     let A = 0, I = 0, S = 0, D = 0, unknown = 0, c = 0;
+    const Q = { n: 0, feed: 0, init: 0, day: 0, unknown: 0 }; // animals in the infirmary, with their history
     for (const e of events) {
-      if (e.kind === 0) {
+      if (e.kind === 0 && e.reason === 'regreso_enfermeria' && Q.n > 1e-9) {
+        // Back from the infirmary: they come back with the history they left with.
+        const q = Math.min(e.q, Q.n);
+        const sh = q / Q.n;
+        S += q * c - sh * Q.feed;
+        I += sh * Q.init;
+        D += sh * Q.day;
+        unknown += sh * Q.unknown;
+        A += q;
+        Q.feed -= sh * Q.feed; Q.init -= sh * Q.init; Q.day -= sh * Q.day; Q.unknown -= sh * Q.unknown; Q.n -= q;
+        if (Q.n < 1e-9) { Q.n = 0; Q.feed = 0; Q.init = 0; Q.day = 0; Q.unknown = 0; }
+      } else if (e.kind === 0) {
         S += e.q * c;
         D += e.q * dayNo(e.date);
         A += e.q;
@@ -73,7 +94,9 @@ export function analyzeExits(movements, consumption, kgByType = {}) {
         const initialKg = share * I;
         const days = dayNo(e.date) - D / A;
         let res;
-        if (e.w == null || unknown > 1e-9) {
+        if (e.reason === 'muerte' || e.reason === 'enfermeria') {
+          res = { fcr: null, rating: null, reason: 'no_aplica', type: e.reason, animals: q, feedKg: r2(feedKg) };
+        } else if (e.w == null || unknown > 1e-9) {
           res = { fcr: null, rating: null, reason: 'sin_peso', animals: q, feedKg: r2(feedKg) };
         } else if (feedKg <= 1e-9) {
           res = { fcr: null, rating: null, reason: 'sin_consumo', animals: q, feedKg: 0, initialKg: r2(initialKg), finalKg: r2(e.w), gainKg: r2(e.w - initialKg) };
@@ -90,7 +113,13 @@ export function analyzeExits(movements, consumption, kgByType = {}) {
           }
         }
         out.set(e.id, res);
-        S -= share * S; I -= share * I; D -= share * D; unknown -= share * unknown; A -= q;
+        const leftI = share * I, leftD = share * D, leftU = share * unknown;
+        S -= share * S; I -= leftI; D -= leftD; unknown -= leftU; A -= q;
+        if (e.reason === 'enfermeria') {
+          Q.n += q; Q.feed += feedKg; Q.init += leftI; Q.day += leftD; Q.unknown += leftU;
+        } else if (e.reason === 'muerte' && A > 1e-9) {
+          S -= feedKg; // the dead animals' feed is carried by those that remain
+        }
         if (A < 1e-9) { A = 0; S = 0; I = 0; D = 0; unknown = 0; }
       }
     }
@@ -100,7 +129,7 @@ export function analyzeExits(movements, consumption, kgByType = {}) {
 
 export async function exitAnalysis(env) {
   const [mv, co, ft] = await Promise.all([
-    env.DB.prepare(`SELECT id, corral_id, movement, quantity, movement_at, created_at, weight_kg FROM animal_movements`).all(),
+    env.DB.prepare(`SELECT id, corral_id, movement, quantity, movement_at, created_at, weight_kg, reason FROM animal_movements`).all(),
     env.DB.prepare(`SELECT id, corral_id, food_type, bultos, consumed_at, created_at, kg_per_bulto FROM feed_consumption`).all(),
     env.DB.prepare(`SELECT type, kg_per_bulto FROM food_types`).all(),
   ]);

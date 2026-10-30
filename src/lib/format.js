@@ -64,3 +64,13 @@ export const RATING = {
   mala: { label: 'Mala', icon: '✕', cls: 'bg-alert-bg text-alert' },
 };
 export const RATING_SCALE = 'Buena: hasta 2,5 · Regular: 2,6 a 3,0 · Mala: más de 3,0';
+
+// Types of animal movement. entries: reason null / 'regreso_enfermeria'; exits: venta / enfermeria / muerte
+export const MOVE_LABEL = {
+  ingreso: 'Ingreso',
+  regreso_enfermeria: 'Regreso de enfermería',
+  venta: 'Venta',
+  enfermeria: 'Enfermería',
+  muerte: 'Muerte',
+};
+export const moveLabel = (r) => (r.movement === 'ingreso' ? MOVE_LABEL[r.reason || 'ingreso'] : MOVE_LABEL[r.reason || 'venta']);

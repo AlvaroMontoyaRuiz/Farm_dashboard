@@ -14,6 +14,8 @@
     "db:remote:seed": "wrangler d1 execute farm-inventory-db --remote --file=./migrations/0002_seed.sql",
     "db:local:update": "wrangler d1 execute farm-inventory-db --local --file=./migrations/0003_weights_and_bulto_types.sql",
     "db:remote:update": "wrangler d1 execute farm-inventory-db --remote --file=./migrations/0003_weights_and_bulto_types.sql",
+    "db:local:update-types": "wrangler d1 execute farm-inventory-db --local --file=./migrations/0004_movement_types.sql",
+    "db:remote:update-types": "wrangler d1 execute farm-inventory-db --remote --file=./migrations/0004_movement_types.sql",
     "db:local:reset": "wrangler d1 execute farm-inventory-db --local --file=./scripts/reset-data.sql",
     "db:remote:reset": "wrangler d1 execute farm-inventory-db --remote --file=./scripts/reset-data.sql"
   },

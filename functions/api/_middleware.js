@@ -2,7 +2,7 @@
 // mistakes into clear JSON error codes instead of an opaque HTTP 500:
 //   - db_binding_missing : the D1 binding named "DB" is not attached
 //   - db_not_initialized : the database exists but the migrations were not run
-//   - db_needs_update    : the code is newer than the database (migration 0003 missing)
+//   - db_needs_update    : the code is newer than the database (migration 0003 or 0004 missing)
 
 import { json } from '../_lib/auth.js';
 

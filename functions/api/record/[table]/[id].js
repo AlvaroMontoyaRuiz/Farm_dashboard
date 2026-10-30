@@ -4,7 +4,7 @@
 // their own rows; admin can delete anyone's.
 
 import { requireUser, json } from '../../../_lib/auth.js';
-import { loadFeedEvents, feedKey, loadAnimalEvents, animalKey, newNegative } from '../../../_lib/stock.js';
+import { infirmaryIn, loadFeedEvents, feedKey, loadAnimalEvents, animalKey, newNegative } from '../../../_lib/stock.js';
 
 const ALLOWED = new Set(['feed_consumption', 'animal_movements', 'food_lots']);
 
@@ -40,6 +40,11 @@ export const onRequestDelete = async ({ request, env, params }) => {
   if (table === 'animal_movements' && row.movement === 'ingreso') {
     const hit = newNegative(await loadAnimalEvents(env, row.corral_id), animalKey, { removeUid: `animal_movements:${id}` });
     if (hit) return json({ error: 'would_go_negative', scope: 'animals', date: hit.split('|')[1] }, 409);
+  }
+
+  if (table === 'animal_movements' && row.movement === 'salida' && row.reason === 'enfermeria') {
+    // Removing this exit would leave more animals returned than ever sent to the infirmary.
+    if ((await infirmaryIn(env, row.corral_id, id)) < 0) return json({ error: 'would_go_negative', scope: 'enfermeria' }, 409);
   }
 
   await env.DB.batch([

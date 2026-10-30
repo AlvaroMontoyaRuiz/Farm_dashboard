@@ -20,6 +20,11 @@ const ERRORS_ES = {
   bad_quantity: 'Cantidad inválida.',
   bad_bultos: 'Cantidad de bultos inválida.',
   bad_movement: 'Tipo de movimiento inválido.',
+  bad_reason: 'Elige el tipo de salida: venta, enfermería o muerte.',
+  not_enough_infirmary: (d) =>
+    d.available > 0
+      ? `Solo hay ${num(d.available)} ${d.available === 1 ? 'animal' : 'animales'} en enfermería de ${d.corral || 'este corral'}.`
+      : `${d.corral || 'Este corral'} no tiene animales en enfermería.`,
   corral_required: 'Debes seleccionar un corral.',
   // These four get the numbers from the server, so the message says exactly what is available.
   not_enough_stock: (d) => {
@@ -37,7 +42,9 @@ const ERRORS_ES = {
       ? `Con esa fecha, ${d.corral || 'el corral'} quedaría con animales negativos el ${shortDay(d.date)}.`
       : `Con esa fecha, el inventario de ${(TYPE_LABEL[d.foodType] || 'alimento').toLowerCase()} quedaría en negativo el ${shortDay(d.date)}.`,
   would_go_negative: (d) =>
-    d.scope === 'animals'
+    d.scope === 'enfermeria'
+      ? 'No se puede eliminar esta salida a enfermería: esos animales ya regresaron.'
+      : d.scope === 'animals'
       ? 'No se puede eliminar este ingreso de animales: ya salieron animales de ese corral y quedaría en negativo.'
       : `No se puede eliminar este ingreso: esos bultos ya se consumieron y el inventario de ${(TYPE_LABEL[d.foodType] || 'alimento').toLowerCase()} quedaría en negativo.`,
   bad_date: 'La fecha no es válida.',
@@ -51,7 +58,7 @@ const ERRORS_ES = {
   db_not_initialized:
     'La base de datos está vacía: faltan las tablas. Hay que ejecutar las migraciones.',
   db_needs_update:
-    'La base de datos necesita una actualización. Ejecuta: npm run db:remote:update',
+    'La base de datos necesita una actualización. Ejecuta: npm run db:remote:update-types',
   bad_weight: 'Escribe el peso total del grupo en kg.',
   weight_implausible: (d) =>
     `Ese peso parece incorrecto: serían ${num(d.perAnimal)} kg por animal. Escribe el peso TOTAL del grupo, no el de un animal.`,

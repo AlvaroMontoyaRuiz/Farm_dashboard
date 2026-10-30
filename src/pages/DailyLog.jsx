@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api.js';
 import { Panel, Skeleton } from '../components/ui.jsx';
-import { localToday, longDay, num2, TYPE_LABEL, TYPE_COLOR } from '../lib/format.js';
+import { localToday, longDay, moveLabel, num2, TYPE_LABEL, TYPE_COLOR } from '../lib/format.js';
 
 export default function DailyLog() {
   const today = localToday();
@@ -82,7 +82,7 @@ export default function DailyLog() {
                       {data.movements.map((r) => (
                         <tr key={r.id} className="border-t border-line">
                           <td data-label="Corral" className="px-3 py-2 whitespace-nowrap">{r.corralName}</td>
-                          <td data-label="Movimiento" className="px-3 py-2">{r.movement === 'ingreso' ? 'Ingreso' : 'Salida'}</td>
+                          <td data-label="Movimiento" className="px-3 py-2">{moveLabel(r)}</td>
                           <td data-label="Animales" className="px-3 py-2 text-right font-semibold">{r.movement === 'ingreso' ? '+' : '−'}{r.quantity}</td>
                           <td data-label="Nota" className="px-3 py-2 text-ink-soft">{r.note || '—'}</td>
                           <td data-label="Registró" className="px-3 py-2 text-ink-soft">{r.createdBy || '—'}</td>

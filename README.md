@@ -126,6 +126,7 @@ Apply the schema and seed to the **remote** database:
 npm run db:remote:init
 npm run db:remote:seed
 npm run db:remote:update
+npm run db:remote:update-types
 ```
 
 ### 3. Create the Pages project
@@ -182,6 +183,17 @@ The app never lets the inventory go below zero:
 
 - Animals enter together but leave in small groups, so each exit is charged with the feed an *average animal* of that corral has eaten since it arrived (animals that arrive later are not charged for earlier feed). The result is recalculated from the records, so deleting or correcting a record fixes it automatically. The maths is in `functions/_lib/fcr.js`.
 
+## Types of animal movement
+
+| Movement | Types | Weight | Feed conversion |
+|---|---|---|---|
+| Ingreso | *Ingreso nuevo* · *Regreso de enfermería* | required for new animals · optional for returns | — |
+| Salida | *Venta* · *Enfermería* · *Muerte* | required for sales · optional otherwise | **only Venta is rated** |
+
+- **Muerte:** the feed those animals ate stays in the batch and is spread over the animals that remain, so losses raise the conversion of the group that is sold.
+- **Enfermería:** the animals leave the corral count but keep their history (feed eaten, entry weight, entry date). A **Regreso de enfermería** brings back that many animals with that history. You cannot return more animals than are in the infirmary, and an infirmary exit that already returned cannot be deleted.
+- Exits recorded before this update count as sales.
+
 ## Updating an existing database (migration 0003)
 
 Weights and kg per bulto need three new columns/tables. On a database that already has migrations 0001 and 0002, run **once**:
@@ -191,7 +203,14 @@ npm run db:remote:update     # real database
 npm run db:local:update      # local test copy
 ```
 
-Until it is run, the app answers *"La base de datos necesita una actualización"*. New installs run `db:remote:init`, `db:remote:seed` and then `db:remote:update`.
+Then run **once** the types update (migration 0004):
+
+```bash
+npm run db:remote:update-types
+npm run db:local:update-types   # local test copy
+```
+
+Until each one is run, the app answers *"La base de datos necesita una actualización"*. New installs run `db:remote:init`, `db:remote:seed`, `db:remote:update` and `db:remote:update-types`, in that order.
 
 ## Start from zero (clean records and users)
 

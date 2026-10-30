@@ -9,9 +9,14 @@ function describe(a) {
   if (a.kind === 'ingreso') return { icon: <IconIn />, text: (<><b>{who}</b> recibió <b>{q} {bultosWord(a.qty)}</b> de {type}</>) };
   const n = Number(a.qty);
   const animals = n === 1 ? 'animal' : 'animales';
-  return a.sub === 'ingreso'
-    ? { icon: <IconPaw />, text: (<><b>{who}</b> ingresó <b>{n} {animals}</b> a {a.corral}</>) }
-    : { icon: <IconPaw />, text: (<><b>{who}</b> sacó <b>{n} {animals}</b> de {a.corral}</>) };
+  const t = {
+    ingreso: <><b>{who}</b> ingresó <b>{n} {animals}</b> a {a.corral}</>,
+    regreso_enfermeria: <><b>{who}</b> regresó <b>{n} {animals}</b> de enfermería a {a.corral}</>,
+    venta: <><b>{who}</b> vendió <b>{n} {animals}</b> de {a.corral}</>,
+    enfermeria: <><b>{who}</b> pasó <b>{n} {animals}</b> de {a.corral} a enfermería</>,
+    muerte: <><b>{who}</b> registró la muerte de <b>{n} {animals}</b> en {a.corral}</>,
+  };
+  return { icon: <IconPaw />, text: t[a.sub] || <><b>{who}</b> sacó <b>{n} {animals}</b> de {a.corral}</> };
 }
 
 export default function ActivityFeed({ items }) {
