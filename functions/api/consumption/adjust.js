@@ -1,11 +1,12 @@
-// POST /api/consumption/adjust  { corralId, foodType, delta }
+// POST /api/consumption/adjust  { corralId, foodType, delta, separate? }
 //
-// The + and − buttons of the tablet screen. delta > 0 adds that many bultos to today's feeding of the
-// corral, delta < 0 takes them off (steps of ½ bulto).
+// What the tablet screen sends when the worker presses "Confirmar". delta > 0 adds that many bultos to
+// today's feeding of the corral, delta < 0 takes them off (steps of ½ bulto).
 //
-//   + Adds to the record this person already made today for that corral and type, or creates it, so
-//     ten taps are one line ("Pedro: 10 bultos"), not ten. Same stock rule as always: it cannot exceed
-//     what is in storage (checked inside the SQL, so two people tapping together cannot both take the last bulto).
+//   + With `separate: true` (what the screen sends) every confirmation is its own record with its own
+//     time, because a corral can be fed several times in one day. Without it, the bultos are added to
+//     the record this person already made today. Same stock rule as always: it cannot exceed what is
+//     in storage (checked inside the SQL, so two people confirming together cannot both take the last bulto).
 //   − Takes bultos off the most recent record of today. Workers can only take off their own; the
 //     administrator can take off anyone's. Whatever is taken off is copied to the deletion history.
 //
@@ -26,7 +27,7 @@ export const onRequestPost = async ({ request, env }) => {
   } catch (r) {
     return r;
   }
-  const { corralId, foodType, delta } = (await request.json().catch(() => ({}))) || {};
+  const { corralId, foodType, delta, separate } = (await request.json().catch(() => ({}))) || {};
   const cid = Number(corralId);
   const d = Number(delta);
   if (!Number.isInteger(cid) || cid <= 0) return json({ error: 'corral_required' }, 400);
@@ -40,7 +41,9 @@ export const onRequestPost = async ({ request, env }) => {
 
   if (d > 0) {
     const noStock = async () => json({ error: 'not_enough_stock', foodType, available: Math.max(0, await feedRemaining(env, foodType)) }, 400);
-    const mine = await db
+    const mine = separate
+      ? null
+      : await db
       .prepare(
         `SELECT id FROM feed_consumption
           WHERE corral_id = ?1 AND food_type = ?2 AND consumed_at = ${TODAY_SQL} AND created_by = ?3

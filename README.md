@@ -210,10 +210,12 @@ The app never lets the inventory go below zero:
 
 ## Feeding screen for workers (tablet)
 
-Workers open **Consumo** and see every corral as a big tile (animals, "Listo"/"Falta" for today). Tapping a corral opens its page with one card per type of bulto (Levante, Engorde, Finalizador): a big **+** adds a bulto, a big **−** takes one off, and the number in the middle is what the corral got today. A switch at the top changes each tap between 1 bulto and ½ bulto.
+Workers open **Consumo** and see every corral as a big tile (animals, "Listo"/"Falta" for today). Tapping a corral opens its page with one card per type of bulto (Levante, Engorde, Finalizador): a big **+** and a big **−**, and the number in the middle is what the corral got today. A switch at the top changes each tap between 1 bulto and ½ bulto.
 
-- **+** adds to the record that person already has today for that corral and type, so ten taps are one line, not ten. It respects the stock in storage (it stops at 0 even if two people tap at once).
-- **−** takes bultos off today's feeding. Workers can only take off what they registered themselves; the administrator can take off anyone's. Everything taken off is copied to *Historial eliminados* with the reason "Se quitó con el botón −".
+- **The taps only prepare the feeding.** Each card shows what is still unconfirmed ("+3 sin confirmar") and nothing is saved until the worker presses the big **Confirmar** button at the bottom. **Deshacer** clears what was prepared. If they try to leave the page with unconfirmed taps, it asks first.
+- **Several feedings a day:** every Confirmar is its own record with its own time, so a corral fed in the morning and again in the afternoon has two records for the day. The kg and conversion calculations add them up.
+- **+** respects the stock in storage (it stops at 0 even if two people confirm at once). When a button cannot be used, it says why ("No hay bultos de engorde en bodega", "Solo puedes quitar lo que tú registraste").
+- **−** takes bultos off today's feeding, starting with the most recent record. Workers can only take off what they registered themselves; the administrator can take off anyone's. Everything taken off is copied to *Historial eliminados* with the reason "Se quitó con el botón −".
 - The administrator keeps the detailed form (other dates, notes) at **Consumo**, with a link to see the workers' screen. Links from the Panel (`/consumo?corral=7`) open the corral's tablet page for workers.
 
 ## Low-stock notices (administrator)
